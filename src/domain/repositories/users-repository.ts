@@ -6,4 +6,6 @@ export interface UsersRepository {
   findById(id: string): Promise<User | null>;
   findByIds(ids: string[]): Promise<User[]>;
   findAll(): Promise<User[]>;
+  update(id: string, updates: { isActive?: boolean }): Promise<User | null>;
+  delete(id: string): Promise<boolean>;
 }

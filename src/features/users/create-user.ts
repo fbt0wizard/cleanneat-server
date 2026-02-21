@@ -60,6 +60,7 @@ export async function createUser(
       name: validated.name,
       email: validated.email,
       password,
+      isActive: true,
       created_at: new Date(),
       updated_at: new Date(),
     });

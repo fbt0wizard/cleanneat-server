@@ -1,6 +1,7 @@
 import { User } from "@domain/entities";
 import type { UsersRepository } from "@domain/repositories";
 import {
+  Prisma,
   type PrismaClient,
   type User as UserModel,
 } from "@prisma/client";
@@ -16,6 +17,7 @@ export function makeUsersRepository(db: PrismaClient): UsersRepository {
           name: user.name,
           email: user.email,
           password: hashedPassword,
+          is_active: user.isActive,
         },
       });
       return toEntity(record);
@@ -49,6 +51,35 @@ export function makeUsersRepository(db: PrismaClient): UsersRepository {
       const records = await db.user.findMany({ orderBy: { created_at: "desc" } });
       return records.map(toEntity);
     },
+
+    async update(id, updates) {
+      try {
+        const record = await db.user.update({
+          where: { id },
+          data: {
+            ...(updates.isActive !== undefined && { is_active: updates.isActive }),
+          },
+        });
+        return toEntity(record);
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+          return null;
+        }
+        throw error;
+      }
+    },
+
+    async delete(id) {
+      try {
+        await db.user.delete({ where: { id } });
+        return true;
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+          return false;
+        }
+        throw error;
+      }
+    },
   };
 }
 
@@ -58,6 +89,7 @@ function toEntity(record: UserModel): User {
     name: record.name,
     email: record.email,
     password: record.password,
+    isActive: record.is_active,
     created_at: record.created_at,
     updated_at: record.updated_at,
   });

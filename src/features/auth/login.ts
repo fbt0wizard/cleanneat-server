@@ -17,8 +17,9 @@ export type LoginResult =
 
 export async function login(
   params: LoginParams,
-  { logger, repositories, config }: UseCaseDependencies
+  deps: UseCaseDependencies
 ): Promise<LoginResult> {
+  const { logger, repositories, config } = deps;
   logger.info({ email: params.email }, "Attempting login");
 
   const validated = paramsSchema.parse(params);
@@ -32,6 +33,14 @@ export async function login(
       logger.warn(
         { email: validated.email },
         "Login attempted with non-existent email"
+      );
+      return { type: "invalid_credentials" };
+    }
+
+    if (!user.isActive) {
+      logger.warn(
+        { email: validated.email, userId: user.id },
+        "Login attempted with deactivated account"
       );
       return { type: "invalid_credentials" };
     }
@@ -65,7 +74,7 @@ export async function login(
         action: "login",
         details: `Logged in as ${user.email}`,
       },
-      { logger, repositories, config },
+      deps,
     );
 
     return {

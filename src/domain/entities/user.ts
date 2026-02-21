@@ -3,6 +3,7 @@ export class User {
   readonly name: string;
   readonly email: string;
   readonly password: string;
+  readonly isActive: boolean;
   readonly created_at: Date;
   readonly updated_at: Date;
 
@@ -11,6 +12,7 @@ export class User {
     name: string;
     email: string;
     password: string;
+    isActive: boolean;
     created_at: Date;
     updated_at: Date;
   }) {
@@ -18,6 +20,7 @@ export class User {
     this.name = params.name;
     this.email = params.email;
     this.password = params.password;
+    this.isActive = params.isActive;
     this.created_at = params.created_at;
     this.updated_at = params.updated_at;
   }

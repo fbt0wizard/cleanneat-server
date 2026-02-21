@@ -7,6 +7,7 @@ export type ListUsersResult =
         id: string;
         name: string;
         email: string;
+        is_active: boolean;
         created_at: Date;
         updated_at: Date;
       }>;
@@ -25,6 +26,7 @@ export async function listUsers(
         id: u.id,
         name: u.name,
         email: u.email,
+        is_active: u.isActive,
         created_at: u.created_at,
         updated_at: u.updated_at,
       })),

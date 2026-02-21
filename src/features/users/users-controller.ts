@@ -1,7 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { match } from "ts-pattern";
 import { createUser } from "./create-user";
+import { deactivateUser } from "./deactivate-user";
+import { deleteUser } from "./delete-user";
 import { listUsers } from "./list-users";
+import { reactivateUser } from "./reactivate-user";
 
 export default async function usersController(fastify: FastifyInstance) {
   fastify.route<{ Body: { name: string; email: string } }>({
@@ -103,10 +106,11 @@ export default async function usersController(fastify: FastifyInstance) {
                   id: { type: "string" },
                   name: { type: "string" },
                   email: { type: "string" },
+                  is_active: { type: "boolean" },
                   created_at: { type: "string", format: "date-time" },
                   updated_at: { type: "string", format: "date-time" },
                 },
-                required: ["id", "name", "email", "created_at", "updated_at"],
+                required: ["id", "name", "email", "is_active", "created_at", "updated_at"],
               },
             },
           },
@@ -123,10 +127,195 @@ export default async function usersController(fastify: FastifyInstance) {
         .with({ type: "success" }, ({ users }) =>
           reply.status(200).send({
             users: users.map((u) => ({
-              ...u,
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              is_active: u.is_active,
               created_at: u.created_at.toISOString(),
               updated_at: u.updated_at.toISOString(),
             })),
+          }),
+        )
+        .with({ type: "error" }, () =>
+          reply.status(500).send({ message: "Internal server error", statusCode: 500 }),
+        )
+        .exhaustive();
+    },
+  });
+
+  // DELETE /api/v1/users/:id
+  fastify.route<{ Params: { id: string } }>({
+    method: "DELETE",
+    url: "/api/v1/users/:id",
+    preHandler: [fastify.authenticate],
+    schema: {
+      summary: "Delete a user",
+      description: "Permanently delete a user. Requires authentication.",
+      tags: ["users"],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: "object",
+        required: ["id"],
+        properties: { id: { type: "string", format: "uuid" } },
+      },
+      response: {
+        200: {
+          description: "User deleted successfully",
+          type: "object",
+          properties: { message: { type: "string" } },
+        },
+        401: { $ref: "ErrorResponse#" },
+        404: { $ref: "ErrorResponse#" },
+        500: { $ref: "ErrorResponse#" },
+      },
+    },
+    handler: async (request, reply) => {
+      const userId = request.userId;
+      if (!userId) {
+        return reply.status(401).send({ message: "Unauthorized", statusCode: 401 });
+      }
+      const result = await deleteUser(
+        { id: request.params.id, deletedByUserId: userId },
+        fastify.dependencies,
+      );
+      return match(result)
+        .with({ type: "success" }, () =>
+          reply.status(200).send({ message: "User deleted successfully" }),
+        )
+        .with({ type: "not_found" }, () =>
+          reply.status(404).send({ message: "User not found", statusCode: 404 }),
+        )
+        .with({ type: "error" }, () =>
+          reply.status(500).send({ message: "Internal server error", statusCode: 500 }),
+        )
+        .exhaustive();
+    },
+  });
+
+  // POST /api/v1/users/:id/deactivate
+  fastify.route<{ Params: { id: string } }>({
+    method: "POST",
+    url: "/api/v1/users/:id/deactivate",
+    preHandler: [fastify.authenticate],
+    schema: {
+      summary: "Deactivate a user",
+      description:
+        "Deactivate a user. Deactivated users cannot log in. Requires authentication.",
+      tags: ["users"],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: "object",
+        required: ["id"],
+        properties: { id: { type: "string", format: "uuid" } },
+      },
+      response: {
+        200: {
+          description: "User deactivated successfully",
+          type: "object",
+          properties: {
+            user: {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                name: { type: "string" },
+                email: { type: "string" },
+                is_active: { type: "boolean" },
+              },
+              required: ["id", "name", "email", "is_active"],
+            },
+          },
+          required: ["user"],
+        },
+        400: { $ref: "ErrorResponse#" },
+        401: { $ref: "ErrorResponse#" },
+        404: { $ref: "ErrorResponse#" },
+        500: { $ref: "ErrorResponse#" },
+      },
+    },
+    handler: async (request, reply) => {
+      const userId = request.userId;
+      if (!userId) {
+        return reply.status(401).send({ message: "Unauthorized", statusCode: 401 });
+      }
+      const result = await deactivateUser(
+        { id: request.params.id, deactivatedByUserId: userId },
+        fastify.dependencies,
+      );
+      return match(result)
+        .with({ type: "success" }, ({ user }) => reply.status(200).send({ user }))
+        .with({ type: "not_found" }, () =>
+          reply.status(404).send({ message: "User not found", statusCode: 404 }),
+        )
+        .with({ type: "already_inactive" }, () =>
+          reply.status(400).send({
+            message: "User is already deactivated",
+            statusCode: 400,
+          }),
+        )
+        .with({ type: "error" }, () =>
+          reply.status(500).send({ message: "Internal server error", statusCode: 500 }),
+        )
+        .exhaustive();
+    },
+  });
+
+  // POST /api/v1/users/:id/reactivate
+  fastify.route<{ Params: { id: string } }>({
+    method: "POST",
+    url: "/api/v1/users/:id/reactivate",
+    preHandler: [fastify.authenticate],
+    schema: {
+      summary: "Reactivate a user",
+      description: "Reactivate a deactivated user so they can log in again. Requires authentication.",
+      tags: ["users"],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: "object",
+        required: ["id"],
+        properties: { id: { type: "string", format: "uuid" } },
+      },
+      response: {
+        200: {
+          description: "User reactivated successfully",
+          type: "object",
+          properties: {
+            user: {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                name: { type: "string" },
+                email: { type: "string" },
+                is_active: { type: "boolean" },
+              },
+              required: ["id", "name", "email", "is_active"],
+            },
+          },
+          required: ["user"],
+        },
+        400: { $ref: "ErrorResponse#" },
+        401: { $ref: "ErrorResponse#" },
+        404: { $ref: "ErrorResponse#" },
+        500: { $ref: "ErrorResponse#" },
+      },
+    },
+    handler: async (request, reply) => {
+      const userId = request.userId;
+      if (!userId) {
+        return reply.status(401).send({ message: "Unauthorized", statusCode: 401 });
+      }
+      const result = await reactivateUser(
+        { id: request.params.id, reactivatedByUserId: userId },
+        fastify.dependencies,
+      );
+      return match(result)
+        .with({ type: "success" }, ({ user }) => reply.status(200).send({ user }))
+        .with({ type: "not_found" }, () =>
+          reply.status(404).send({ message: "User not found", statusCode: 404 }),
+        )
+        .with({ type: "already_active" }, () =>
+          reply.status(400).send({
+            message: "User is already active",
+            statusCode: 400,
           }),
         )
         .with({ type: "error" }, () =>
