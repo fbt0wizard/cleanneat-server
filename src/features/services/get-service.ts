@@ -1,3 +1,4 @@
+import type { Service } from '@domain/entities';
 import type { UseCaseDependencies } from '@infrastructure/di';
 import { z } from 'zod';
 
@@ -7,7 +8,7 @@ const paramsSchema = z.object({
 
 export type GetServiceParams = z.input<typeof paramsSchema>;
 export type GetServiceResult =
-  | { type: 'success'; service: { id: string; title: string; slug: string; userId: string } }
+  | { type: 'success'; service: Service }
   | { type: 'not_found' };
 
 export async function getService(
@@ -27,11 +28,6 @@ export async function getService(
 
   return {
     type: 'success',
-    service: {
-      id: service.id,
-      title: service.title,
-      slug: service.slug,
-      userId: service.userId,
-    },
+    service,
   };
 }

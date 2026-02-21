@@ -4,7 +4,32 @@ import { createService } from './create-service';
 import { deleteService } from './delete-service';
 import { getService } from './get-service';
 import { listServices } from './list-services';
+import { toServiceResponse } from './service-response';
 import { updateService } from './update-service';
+
+const serviceResponseSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    title: { type: 'string' },
+    slug: { type: 'string' },
+    short_description: { type: 'string' },
+    long_description: { type: 'string' },
+    whats_included: { type: 'array', items: { type: 'string' } },
+    whats_not_included: { type: 'array', items: { type: 'string' } },
+    typical_duration: { type: 'string' },
+    price_from: { type: 'string' },
+    image_url: { type: 'string', format: 'uri', nullable: true },
+    is_published: { type: 'boolean' },
+    sort_order: { type: 'integer' },
+    user_id: { type: 'string' },
+  },
+  required: [
+    'id', 'title', 'slug', 'short_description', 'long_description',
+    'whats_included', 'whats_not_included', 'typical_duration', 'price_from',
+    'image_url', 'is_published', 'sort_order', 'user_id',
+  ],
+};
 
 export default async function servicesController(fastify: FastifyInstance) {
   // POST /api/v1/services - Create service
@@ -52,16 +77,9 @@ export default async function servicesController(fastify: FastifyInstance) {
           description: 'Service created successfully',
           type: 'object',
           properties: {
-            service: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                title: { type: 'string' },
-                slug: { type: 'string' },
-                userId: { type: 'string' },
-              },
-            },
+            service: serviceResponseSchema,
           },
+          required: ['service'],
         },
         401: { $ref: 'ErrorResponse#' },
         400: { $ref: 'ErrorResponse#' },
@@ -94,14 +112,7 @@ export default async function servicesController(fastify: FastifyInstance) {
 
       return match(result)
         .with({ type: 'success' }, ({ service }) =>
-          reply.status(201).send({
-            service: {
-              id: service.id,
-              title: service.title,
-              slug: service.slug,
-              userId: service.userId,
-            },
-          }),
+          reply.status(201).send({ service: toServiceResponse(service) }),
         )
         .with({ type: 'slug_taken' }, () =>
           reply.status(409).send({ message: 'Slug already taken', statusCode: 409 }),
@@ -136,17 +147,10 @@ export default async function servicesController(fastify: FastifyInstance) {
           properties: {
             services: {
               type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string' },
-                  title: { type: 'string' },
-                  slug: { type: 'string' },
-                  userId: { type: 'string' },
-                },
-              },
+              items: serviceResponseSchema,
             },
           },
+          required: ['services'],
         },
       },
     },
@@ -157,7 +161,9 @@ export default async function servicesController(fastify: FastifyInstance) {
       );
 
       return match(result)
-        .with({ type: 'success' }, ({ services }) => reply.status(200).send({ services }))
+        .with({ type: 'success' }, ({ services }) =>
+          reply.status(200).send({ services: services.map(toServiceResponse) }),
+        )
         .exhaustive();
     },
   });
@@ -181,16 +187,9 @@ export default async function servicesController(fastify: FastifyInstance) {
           description: 'Service retrieved successfully',
           type: 'object',
           properties: {
-            service: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                title: { type: 'string' },
-                slug: { type: 'string' },
-                userId: { type: 'string' },
-              },
-            },
+            service: serviceResponseSchema,
           },
+          required: ['service'],
         },
         404: { $ref: 'ErrorResponse#' },
       },
@@ -200,14 +199,7 @@ export default async function servicesController(fastify: FastifyInstance) {
 
       return match(result)
         .with({ type: 'success' }, ({ service }) =>
-          reply.status(200).send({
-            service: {
-              id: service.id,
-              title: service.title,
-              slug: service.slug,
-              userId: service.userId,
-            },
-          }),
+          reply.status(200).send({ service: toServiceResponse(service) }),
         )
         .with({ type: 'not_found' }, () =>
           reply.status(404).send({ message: 'Service not found', statusCode: 404 }),
@@ -268,16 +260,9 @@ export default async function servicesController(fastify: FastifyInstance) {
           description: 'Service updated successfully',
           type: 'object',
           properties: {
-            service: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                title: { type: 'string' },
-                slug: { type: 'string' },
-                userId: { type: 'string' },
-              },
-            },
+            service: serviceResponseSchema,
           },
+          required: ['service'],
         },
         401: { $ref: 'ErrorResponse#' },
         403: { $ref: 'ErrorResponse#' },
@@ -330,14 +315,10 @@ export default async function servicesController(fastify: FastifyInstance) {
 
       return match(result)
         .with({ type: 'success' }, ({ service }) =>
-          reply.status(200).send({
-            service: {
-              id: service.id,
-              title: service.title,
-              slug: service.slug,
-              userId: service.userId,
-            },
-          }),
+          reply.status(200).send({ service: toServiceResponse(service) }),
+        )
+        .with({ type: 'not_found' }, () =>
+          reply.status(404).send({ message: 'Service not found', statusCode: 404 }),
         )
         .with({ type: 'slug_taken' }, () =>
           reply.status(409).send({ message: 'Slug already taken', statusCode: 409 }),

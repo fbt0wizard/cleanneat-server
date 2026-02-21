@@ -1,3 +1,4 @@
+import type { Service } from '@domain/entities';
 import type { UseCaseDependencies } from '@infrastructure/di';
 import { logAction } from '../action-logs/log-action';
 import { z } from 'zod';
@@ -19,7 +20,7 @@ const paramsSchema = z.object({
 
 export type UpdateServiceParams = z.input<typeof paramsSchema>;
 export type UpdateServiceResult =
-  | { type: 'success'; service: { id: string; title: string; slug: string; userId: string } }
+  | { type: 'success'; service: Service }
   | { type: 'not_found' }
   | { type: 'slug_taken' }
   | { type: 'error' };
@@ -71,12 +72,7 @@ export async function updateService(
 
     return {
       type: 'success',
-      service: {
-        id: updatedService.id,
-        title: updatedService.title,
-        slug: updatedService.slug,
-        userId: updatedService.userId,
-      },
+      service: updatedService,
     };
   } catch (error) {
     logger.error({ error, serviceId: validated.id }, 'Failed to update service');

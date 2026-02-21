@@ -1,3 +1,4 @@
+import type { Service } from '@domain/entities';
 import type { UseCaseDependencies } from '@infrastructure/di';
 import { z } from 'zod';
 
@@ -8,7 +9,7 @@ const paramsSchema = z.object({
 export type ListServicesParams = z.input<typeof paramsSchema>;
 export type ListServicesResult = {
   type: 'success';
-  services: Array<{ id: string; title: string; slug: string; userId: string }>;
+  services: Service[];
 };
 
 export async function listServices(
@@ -25,11 +26,6 @@ export async function listServices(
 
   return {
     type: 'success',
-    services: services.map((service) => ({
-      id: service.id,
-      title: service.title,
-      slug: service.slug,
-      userId: service.userId,
-    })),
+    services,
   };
 }
