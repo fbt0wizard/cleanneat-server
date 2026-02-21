@@ -16,24 +16,43 @@ import swaggerPlugin from './plugins/swagger';
 export async function app(fastify: FastifyInstance, dependencies: Dependencies) {
   const { config } = dependencies;
   const isProduction = config.env === 'production';
-  const allowedOrigins = [
-    'https://preview--clean-neat-home.base44.app',
-    'https://clean-neat-home.base44.app',
-    'http://localhost:5173',
-    'https://api.cleanneat.co.uk',        // Add this
-    'https://cleanneat.co.uk',             // Maybe also the main domain if needed
-    'https://www.cleanneat.co.uk',         // And www if applicable
-  ];
-  const corsOrigin = config.corsOrigin ?? allowedOrigins;
 
   fastify.addHook('onClose', async () => {
     await dependencies.dispose();
   });
 
+  await fastify.register(Cors, {
+    origin: (origin, cb) => {
+      const allowedOrigins = [
+        'https://preview--clean-neat-home.base44.app',
+        'https://clean-neat-home.base44.app',
+        'http://localhost:5173',
+        'https://api.cleanneat.co.uk',
+        'https://cleanneat.co.uk',
+      ];
+
+      // Allow requests with no origin (like mobile apps, curl, etc)
+      if (!origin) {
+        cb(null, true);
+        return;
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        cb(null, origin);
+      } else {
+        cb(new Error('Not allowed by CORS'), false);
+      }
+    },
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true,
+    optionsSuccessStatus: 204,
+    preflightContinue: false,
+  });
+
   await fastify.register(dependencyInjectionPlugin, { dependencies });
   await fastify.register(authenticatePlugin, { dependencies });
   await fastify.register(Helmet, { global: true });
-  await fastify.register(Cors, { origin: corsOrigin });
 
   if (!isProduction) {
     await fastify.register(swaggerPlugin);
