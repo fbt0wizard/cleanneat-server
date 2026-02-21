@@ -2,6 +2,13 @@ import { Service } from '@domain/entities';
 import type { ServicesRepository } from '@domain/repositories';
 import { Prisma, type PrismaClient, type Service as ServiceModel } from '@prisma/client';
 
+function jsonToStringArray(value: unknown): string[] {
+  if (Array.isArray(value) && value.every((x) => typeof x === 'string')) {
+    return value;
+  }
+  return [];
+}
+
 export function makeServicesRepository(db: PrismaClient): ServicesRepository {
   return {
     async create(service) {
@@ -10,16 +17,16 @@ export function makeServicesRepository(db: PrismaClient): ServicesRepository {
           id: service.id,
           title: service.title,
           slug: service.slug,
-          shortDescription: service.shortDescription,
-          longDescription: service.longDescription,
-          whatsIncluded: service.whatsIncluded,
-          whatsNotIncluded: service.whatsNotIncluded,
-          typicalDuration: service.typicalDuration,
-          priceFrom: service.priceFrom,
-          imageUrl: service.imageUrl,
-          isPublished: service.isPublished,
-          sortOrder: service.sortOrder,
-          userId: service.userId,
+          short_description: service.shortDescription,
+          long_description: service.longDescription,
+          whats_included: service.whatsIncluded as unknown as Prisma.InputJsonValue,
+          whats_not_included: service.whatsNotIncluded as unknown as Prisma.InputJsonValue,
+          typical_duration: service.typicalDuration,
+          price_from: service.priceFrom,
+          image_url: service.imageUrl,
+          is_published: service.isPublished,
+          sort_order: service.sortOrder,
+          user_id: service.userId,
         },
       });
       return toEntity(record);
@@ -31,15 +38,19 @@ export function makeServicesRepository(db: PrismaClient): ServicesRepository {
         data: {
           ...(updates.title !== undefined && { title: updates.title }),
           ...(updates.slug !== undefined && { slug: updates.slug }),
-          ...(updates.shortDescription !== undefined && { shortDescription: updates.shortDescription }),
-          ...(updates.longDescription !== undefined && { longDescription: updates.longDescription }),
-          ...(updates.whatsIncluded !== undefined && { whatsIncluded: updates.whatsIncluded }),
-          ...(updates.whatsNotIncluded !== undefined && { whatsNotIncluded: updates.whatsNotIncluded }),
-          ...(updates.typicalDuration !== undefined && { typicalDuration: updates.typicalDuration }),
-          ...(updates.priceFrom !== undefined && { priceFrom: updates.priceFrom }),
-          ...(updates.imageUrl !== undefined && { imageUrl: updates.imageUrl }),
-          ...(updates.isPublished !== undefined && { isPublished: updates.isPublished }),
-          ...(updates.sortOrder !== undefined && { sortOrder: updates.sortOrder }),
+          ...(updates.shortDescription !== undefined && { short_description: updates.shortDescription }),
+          ...(updates.longDescription !== undefined && { long_description: updates.longDescription }),
+          ...(updates.whatsIncluded !== undefined && {
+            whats_included: updates.whatsIncluded as unknown as Prisma.InputJsonValue,
+          }),
+          ...(updates.whatsNotIncluded !== undefined && {
+            whats_not_included: updates.whatsNotIncluded as unknown as Prisma.InputJsonValue,
+          }),
+          ...(updates.typicalDuration !== undefined && { typical_duration: updates.typicalDuration }),
+          ...(updates.priceFrom !== undefined && { price_from: updates.priceFrom }),
+          ...(updates.imageUrl !== undefined && { image_url: updates.imageUrl }),
+          ...(updates.isPublished !== undefined && { is_published: updates.isPublished }),
+          ...(updates.sortOrder !== undefined && { sort_order: updates.sortOrder }),
         },
       });
       return toEntity(record);
@@ -63,15 +74,15 @@ export function makeServicesRepository(db: PrismaClient): ServicesRepository {
 
     async findByUserId(userId) {
       const records = await db.service.findMany({
-        where: { userId },
-        orderBy: [{ sortOrder: 'asc' }, { created_at: 'desc' }],
+        where: { user_id: userId },
+        orderBy: [{ sort_order: 'asc' }, { created_at: 'desc' }],
       });
       return records.map(toEntity);
     },
 
     async findAll() {
       const records = await db.service.findMany({
-        orderBy: [{ sortOrder: 'asc' }, { created_at: 'desc' }],
+        orderBy: [{ sort_order: 'asc' }, { created_at: 'desc' }],
       });
       return records.map(toEntity);
     },
@@ -95,16 +106,16 @@ function toEntity(record: ServiceModel): Service {
     id: record.id,
     title: record.title,
     slug: record.slug,
-    shortDescription: record.shortDescription,
-    longDescription: record.longDescription,
-    whatsIncluded: record.whatsIncluded,
-    whatsNotIncluded: record.whatsNotIncluded,
-    typicalDuration: record.typicalDuration,
-    priceFrom: record.priceFrom,
-    imageUrl: record.imageUrl,
-    isPublished: record.isPublished,
-    sortOrder: record.sortOrder,
-    userId: record.userId,
+    shortDescription: record.short_description,
+    longDescription: record.long_description,
+    whatsIncluded: jsonToStringArray(record.whats_included),
+    whatsNotIncluded: jsonToStringArray(record.whats_not_included),
+    typicalDuration: record.typical_duration,
+    priceFrom: record.price_from,
+    imageUrl: record.image_url,
+    isPublished: record.is_published,
+    sortOrder: record.sort_order,
+    userId: record.user_id,
     created_at: record.created_at,
     updated_at: record.updated_at,
   });

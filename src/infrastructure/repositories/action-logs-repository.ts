@@ -10,10 +10,10 @@ export function makeActionLogsRepository(
       const record = await db.actionLog.create({
         data: {
           id: log.id,
-          userId: log.userId,
+          user_id: log.userId,
           action: log.action,
-          entityType: log.entityType,
-          entityId: log.entityId,
+          entity_type: log.entityType,
+          entity_id: log.entityId,
           details: log.details,
         },
       });
@@ -22,7 +22,7 @@ export function makeActionLogsRepository(
 
     async findByUserId(userId, limit = 100) {
       const records = await db.actionLog.findMany({
-        where: { userId },
+        where: { user_id: userId },
         orderBy: { created_at: "desc" },
         take: limit,
       });
@@ -42,10 +42,10 @@ export function makeActionLogsRepository(
 function toEntity(record: ActionLogModel): ActionLog {
   return new ActionLog({
     id: record.id,
-    userId: record.userId,
+    userId: record.user_id,
     action: record.action,
-    entityType: record.entityType,
-    entityId: record.entityId,
+    entityType: record.entity_type,
+    entityId: record.entity_id,
     details: record.details,
     created_at: record.created_at,
   });

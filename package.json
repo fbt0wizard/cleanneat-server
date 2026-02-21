@@ -13,7 +13,14 @@
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
-    "prepare": "lefthook install"
+    "prepare": "lefthook install",
+    "db:migrate": "prisma migrate deploy --config prisma/prisma.config.ts",
+    "db:migrate:dev": "prisma migrate dev --config prisma/prisma.config.ts",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:setup": "npm run db:migrate && npm run db:seed"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.2.0",
@@ -22,6 +29,7 @@
     "@fastify/swagger": "^9.6.1",
     "@fastify/swagger-ui": "^5.2.4",
     "@fastify/type-provider-json-schema-to-ts": "^5.0.0",
+    "@prisma/adapter-mariadb": "^7.4.1",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "bcrypt": "^6.0.0",
