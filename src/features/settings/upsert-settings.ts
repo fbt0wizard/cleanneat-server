@@ -25,7 +25,10 @@ const bodySchema = z
   .strict();
 
 export type UpsertSettingsParams = z.input<typeof bodySchema>;
-export type UpsertSettingsResult = { type: 'success'; settings: Settings } | { type: 'error' };
+export type UpsertSettingsResult =
+  | { type: 'success'; settings: Settings }
+  | { type: 'validation_error'; message: string; issues: unknown }
+  | { type: 'error' };
 
 export async function upsertSettings(
   params: UpsertSettingsParams,
@@ -33,10 +36,18 @@ export async function upsertSettings(
 ): Promise<UpsertSettingsResult> {
   logger.info('Upserting settings');
 
+  const parsed = bodySchema.safeParse(params);
+  if (!parsed.success) {
+    const msg = parsed.error.message;
+    const issues = parsed.error.issues;
+    logger.warn({ message: msg, issues }, 'Settings validation failed');
+    return { type: 'validation_error', message: msg, issues };
+  }
+  const validated = parsed.data;
+
   try {
-    const validated = bodySchema.parse(params);
-    const updates: SettingsUpdate = {};
-    const keys = [
+    const updates: Record<string, unknown> = {};
+    const keys: (keyof SettingsUpdate)[] = [
       'primary_phone',
       'primary_email',
       'office_hours_text',
@@ -53,14 +64,18 @@ export async function upsertSettings(
       'social_linkedin',
       'logo_url',
       'favicon_url',
-    ] as const;
+    ];
     for (const key of keys) {
       if (validated[key] !== undefined) updates[key] = validated[key];
     }
-    const settings = await repositories.settingsRepository.upsert(updates);
+    const settings = await repositories.settingsRepository.upsert(updates as SettingsUpdate);
     return { type: 'success', settings };
   } catch (error) {
-    logger.error({ error }, 'Failed to upsert settings');
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error(
+      { err: { message: err.message, name: err.name, stack: err.stack } },
+      'Failed to upsert settings',
+    );
     return { type: 'error' };
   }
 }

@@ -102,6 +102,7 @@ export default async function settingsController(fastify: FastifyInstance) {
           properties: { settings: settingsResponseSchema },
           required: ['settings'],
         },
+        400: { $ref: 'ErrorResponse#' },
         500: { $ref: 'ErrorResponse#' },
       },
     },
@@ -110,6 +111,9 @@ export default async function settingsController(fastify: FastifyInstance) {
       return match(result)
         .with({ type: 'success' }, ({ settings }) =>
           reply.status(200).send({ settings: toSettingsResponse(settings) }),
+        )
+        .with({ type: 'validation_error' }, ({ message }) =>
+          reply.status(400).send({ message: `Validation failed: ${message}`, statusCode: 400 }),
         )
         .with({ type: 'error' }, () =>
           reply.status(500).send({ message: 'Internal server error', statusCode: 500 }),
