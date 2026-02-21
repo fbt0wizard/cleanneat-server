@@ -19,6 +19,7 @@ export async function app(fastify: FastifyInstance, dependencies: Dependencies) 
   const defaultOrigins = [
     'https://app.base44.com',
     'http://localhost:5173',
+    'https://preview--clean-neat-home.base44.app'
   ];
   const corsOrigin = config.corsOrigin ?? defaultOrigins;
 
