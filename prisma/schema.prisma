@@ -98,3 +98,32 @@ model Settings {
 
   @@map("settings")
 }
+
+model Inquiry {
+  id                         String    @id
+  requester_type              String    @map("requester_type")
+  full_name                   String    @map("full_name")
+  email                      String    @map("email")
+  phone                      String    @map("phone")
+  preferred_contact_method   String    @map("preferred_contact_method")
+  address_line               String    @map("address_line")
+  postcode                   String    @map("postcode")
+  service_type               Json      @map("service_type")
+  property_type              String    @map("property_type")
+  bedrooms                   Int       @map("bedrooms")
+  bathrooms                  Int       @map("bathrooms")
+  preferred_start_date       String?   @map("preferred_start_date")
+  frequency                  String    @map("frequency")
+  cleaning_scope_notes       String    @db.Text @map("cleaning_scope_notes")
+  access_needs_or_preferences String?  @db.Text @map("access_needs_or_preferences")
+  consent_to_contact        Boolean   @map("consent_to_contact")
+  consent_data_processing   Boolean   @map("consent_data_processing")
+  status                     String    @default("new") @map("status")
+  internal_notes             Json      @default("[]") @map("internal_notes")
+  created_at                 DateTime  @default(now()) @map("created_at")
+  updated_at                 DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([created_at])
+  @@map("inquiries")
+}

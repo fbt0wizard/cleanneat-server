@@ -2,13 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Handlebars from 'handlebars';
 import nodemailer from 'nodemailer';
-import type { ApplicationConfig } from '../config';
 import type pino from 'pino';
+import type { ApplicationConfig } from '../config';
 
 export type MailConfig = NonNullable<ApplicationConfig['mail']>;
 
 export interface Mailer {
   sendUserCredentials(to: string, name: string, email: string, password: string): Promise<void>;
+  sendInquiryConfirmation(to: string, fullName: string, inquiryId: string): Promise<void>;
 }
 
 function getTemplatesDir(): string {
@@ -31,6 +32,9 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
       async sendUserCredentials() {
         // no-op
       },
+      async sendInquiryConfirmation() {
+        // no-op
+      },
     };
   }
 
@@ -39,20 +43,23 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
     port: mail.port,
     secure: false,
     requireTLS: true,
-    auth:
-      mail.user && mail.pass
-        ? { user: mail.user, pass: mail.pass }
-        : undefined,
+    auth: mail.user && mail.pass ? { user: mail.user, pass: mail.pass } : undefined,
     connectionTimeout: 15_000,
     greetingTimeout: 15_000,
     socketTimeout: 30_000,
   });
 
-  let template: Handlebars.TemplateDelegate | null = null;
+  let credentialsTemplate: Handlebars.TemplateDelegate | null = null;
+  let inquiryConfirmationTemplate: Handlebars.TemplateDelegate | null = null;
 
   function getCredentialsTemplate(): Handlebars.TemplateDelegate {
-    template ??= loadTemplate('user-credentials');
-    return template;
+    credentialsTemplate ??= loadTemplate('user-credentials');
+    return credentialsTemplate;
+  }
+
+  function getInquiryConfirmationTemplate(): Handlebars.TemplateDelegate {
+    inquiryConfirmationTemplate ??= loadTemplate('inquiry-confirmation');
+    return inquiryConfirmationTemplate;
   }
 
   const SEND_TIMEOUT_MS = 30_000;
@@ -81,6 +88,32 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
         logger.info({ to }, 'Credentials email sent');
       } catch (err) {
         logger.warn({ err, to }, 'Failed to send credentials email');
+        throw err;
+      }
+    },
+
+    async sendInquiryConfirmation(to: string, fullName: string, inquiryId: string) {
+      try {
+        const html = getInquiryConfirmationTemplate()({
+          fullName,
+          inquiryId,
+        });
+
+        const sendPromise = transporter.sendMail({
+          from: mail.fromName ? `"${mail.fromName}" <${mail.from}>` : mail.from,
+          to,
+          subject: 'We received your quote request',
+          html,
+        });
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Email send timeout')), SEND_TIMEOUT_MS);
+        });
+
+        await Promise.race([sendPromise, timeoutPromise]);
+        logger.info({ to, inquiryId }, 'Inquiry confirmation email sent');
+      } catch (err) {
+        logger.warn({ err, to, inquiryId }, 'Failed to send inquiry confirmation email');
         throw err;
       }
     },

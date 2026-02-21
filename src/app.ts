@@ -5,6 +5,7 @@ import type { FastifyInstance } from 'fastify';
 import actionLogsController from './features/action-logs/action-logs-controller';
 import authController from './features/auth/auth-controller';
 import faqController from './features/faq/faq-controller';
+import inquiriesController from './features/inquiries/inquiries-controller';
 import servicesController from './features/services/services-controller';
 import settingsController from './features/settings/settings-controller';
 import usersController from './features/users/users-controller';
@@ -41,34 +42,32 @@ export async function app(fastify: FastifyInstance, dependencies: Dependencies) 
         const allowedPatterns = [
           // All base44.app subdomains (preview, staging, production, etc.)
           (origin: string) => origin.endsWith('.base44.app'),
-          
+
           // Specific exact matches
           (origin: string) => origin === 'https://clean-neat-home.base44.app',
           (origin: string) => origin === 'http://localhost:5173',
           (origin: string) => origin === 'https://api.cleanneat.co.uk',
           (origin: string) => origin === 'https://cleanneat.co.uk',
           (origin: string) => origin === 'https://www.cleanneat.co.uk',
-          
+
           // Allow any localhost with any port (for development)
-          (origin: string) => hostname === 'localhost',
-          
+          (_origin: string) => hostname === 'localhost',
+
           // Allow any .cleanneat.co.uk subdomain
-          (origin: string) => hostname.endsWith('.cleanneat.co.uk') || hostname === 'cleanneat.co.uk'
+          (_origin: string) => hostname.endsWith('.cleanneat.co.uk') || hostname === 'cleanneat.co.uk',
         ];
 
         // Check if any pattern matches
-        const isAllowed = allowedPatterns.some(pattern => pattern(fullOrigin));
+        const isAllowed = allowedPatterns.some((pattern) => pattern(fullOrigin));
 
         if (isAllowed) {
           // Important: echo back the specific origin, not '*'
           cb(null, origin);
         } else {
-          console.warn(`CORS blocked origin: ${origin}`);
           cb(new Error('Not allowed by CORS'), false);
         }
-      } catch (err) {
+      } catch (_err) {
         // If URL parsing fails, reject
-        console.warn(`CORS blocked invalid origin: ${origin}`);
         cb(new Error('Invalid origin'), false);
       }
     },
@@ -80,7 +79,7 @@ export async function app(fastify: FastifyInstance, dependencies: Dependencies) 
       'Accept',
       'Origin',
       'Access-Control-Request-Method',
-      'Access-Control-Request-Headers'
+      'Access-Control-Request-Headers',
     ],
     exposedHeaders: ['Content-Length', 'Content-Type', 'Authorization'],
     credentials: true,
@@ -91,11 +90,11 @@ export async function app(fastify: FastifyInstance, dependencies: Dependencies) 
 
   await fastify.register(dependencyInjectionPlugin, { dependencies });
   await fastify.register(authenticatePlugin, { dependencies });
-  
+
   // Helmet after CORS to avoid header conflicts
-  await fastify.register(Helmet, { 
+  await fastify.register(Helmet, {
     global: true,
-    crossOriginResourcePolicy: { policy: "cross-origin" } // Important for CORS
+    crossOriginResourcePolicy: { policy: 'cross-origin' }, // Important for CORS
   });
 
   if (!isProduction) {
@@ -109,6 +108,7 @@ export async function app(fastify: FastifyInstance, dependencies: Dependencies) 
   await fastify.register(usersController);
   await fastify.register(servicesController);
   await fastify.register(faqController);
+  await fastify.register(inquiriesController);
   await fastify.register(settingsController);
   await fastify.register(actionLogsController);
 

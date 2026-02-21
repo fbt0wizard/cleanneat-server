@@ -1,0 +1,72 @@
+export class Inquiry {
+  readonly id: string;
+  readonly requester_type: string;
+  readonly full_name: string;
+  readonly email: string;
+  readonly phone: string;
+  readonly preferred_contact_method: string;
+  readonly address_line: string;
+  readonly postcode: string;
+  readonly service_type: string[];
+  readonly property_type: string;
+  readonly bedrooms: number;
+  readonly bathrooms: number;
+  readonly preferred_start_date: string | null;
+  readonly frequency: string;
+  readonly cleaning_scope_notes: string;
+  readonly access_needs_or_preferences: string | null;
+  readonly consent_to_contact: boolean;
+  readonly consent_data_processing: boolean;
+  readonly status: string;
+  readonly internal_notes: string[];
+  readonly created_at: Date;
+  readonly updated_at: Date;
+
+  constructor(params: {
+    id: string;
+    requester_type: string;
+    full_name: string;
+    email: string;
+    phone: string;
+    preferred_contact_method: string;
+    address_line: string;
+    postcode: string;
+    service_type: string[];
+    property_type: string;
+    bedrooms: number;
+    bathrooms: number;
+    preferred_start_date: string | null;
+    frequency: string;
+    cleaning_scope_notes: string;
+    access_needs_or_preferences: string | null;
+    consent_to_contact: boolean;
+    consent_data_processing: boolean;
+    status: string;
+    internal_notes: string[];
+    created_at: Date;
+    updated_at: Date;
+  }) {
+    this.id = params.id;
+    this.requester_type = params.requester_type;
+    this.full_name = params.full_name;
+    this.email = params.email;
+    this.phone = params.phone;
+    this.preferred_contact_method = params.preferred_contact_method;
+    this.address_line = params.address_line;
+    this.postcode = params.postcode;
+    this.service_type = params.service_type;
+    this.property_type = params.property_type;
+    this.bedrooms = params.bedrooms;
+    this.bathrooms = params.bathrooms;
+    this.preferred_start_date = params.preferred_start_date;
+    this.frequency = params.frequency;
+    this.cleaning_scope_notes = params.cleaning_scope_notes;
+    this.access_needs_or_preferences = params.access_needs_or_preferences;
+    this.consent_to_contact = params.consent_to_contact;
+    this.consent_data_processing = params.consent_data_processing;
+    this.status = params.status;
+    this.internal_notes = params.internal_notes;
+    this.created_at = params.created_at;
+    this.updated_at = params.updated_at;
+  }
+}
