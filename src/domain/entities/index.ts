@@ -2,3 +2,4 @@ export * from './user';
 export * from './service';
 export * from './action-log';
 export * from './faq';
+export * from './settings';

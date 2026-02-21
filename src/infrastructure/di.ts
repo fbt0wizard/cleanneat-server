@@ -6,6 +6,7 @@ import { makeLogger } from "./logger";
 import { makeActionLogsRepository } from "./repositories/action-logs-repository";
 import { makeFaqsRepository } from "./repositories/faqs-repository";
 import { makeServicesRepository } from "./repositories/services-repository";
+import { makeSettingsRepository } from "./repositories/settings-repository";
 import { makeUsersRepository } from "./repositories/users-repository";
 
 export async function makeDependencies() {
@@ -33,6 +34,7 @@ export async function makeDependencies() {
   const servicesRepository = makeServicesRepository(db);
   const actionLogsRepository = makeActionLogsRepository(db);
   const faqsRepository = makeFaqsRepository(db);
+  const settingsRepository = makeSettingsRepository(db);
   const mailer = makeMailer(config, logger);
 
   return {
@@ -45,6 +47,7 @@ export async function makeDependencies() {
       servicesRepository,
       actionLogsRepository,
       faqsRepository,
+      settingsRepository,
     },
     dispose: async () => {
       await db.$disconnect();

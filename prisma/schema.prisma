@@ -75,3 +75,26 @@ model Faq {
   @@index([is_published])
   @@map("faqs")
 }
+
+model Settings {
+  id                    String   @id @default("default")
+  primary_phone         String?  @map("primary_phone")
+  primary_email         String?  @map("primary_email")
+  office_hours_text     String?  @db.Text @map("office_hours_text")
+  service_area_text     String?  @db.Text @map("service_area_text")
+  service_area_postcodes Json?   @map("service_area_postcodes")
+  hero_badge_text       String?  @map("hero_badge_text")
+  hero_headline         String?  @db.Text @map("hero_headline")
+  hero_headline_highlight String? @map("hero_headline_highlight")
+  hero_subtext          String?  @db.Text @map("hero_subtext")
+  hero_images           Json?    @map("hero_images")
+  social_facebook       String?  @map("social_facebook")
+  social_instagram      String?  @map("social_instagram")
+  social_twitter        String?  @map("social_twitter")
+  social_linkedin       String?  @map("social_linkedin")
+  logo_url              String?  @map("logo_url")
+  favicon_url           String?  @map("favicon_url")
+  updated_at            DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
