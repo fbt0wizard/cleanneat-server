@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { makeConfig } from "./config";
 import { makeLogger } from "./logger";
 import { makeActionLogsRepository } from "./repositories/action-logs-repository";
+import { makeFaqsRepository } from "./repositories/faqs-repository";
 import { makeServicesRepository } from "./repositories/services-repository";
 import { makeUsersRepository } from "./repositories/users-repository";
 
@@ -30,6 +31,7 @@ export async function makeDependencies() {
   const usersRepository = makeUsersRepository(db);
   const servicesRepository = makeServicesRepository(db);
   const actionLogsRepository = makeActionLogsRepository(db);
+  const faqsRepository = makeFaqsRepository(db);
 
   return {
     config,
@@ -39,6 +41,7 @@ export async function makeDependencies() {
       usersRepository,
       servicesRepository,
       actionLogsRepository,
+      faqsRepository,
     },
     dispose: async () => {
       await db.$disconnect();

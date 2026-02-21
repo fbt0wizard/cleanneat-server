@@ -59,3 +59,18 @@ model ActionLog {
   @@index([action])
   @@map("action_logs")
 }
+
+model Faq {
+  id          String   @id @default(uuid())
+  question    String   @db.Text
+  answer      String   @db.Text
+  category    String   @map("category")
+  is_published Boolean @default(false) @map("is_published")
+  sort_order  Int      @default(0) @map("sort_order")
+  created_at  DateTime @default(now()) @map("created_at")
+  updated_at  DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@index([is_published])
+  @@map("faqs")
+}

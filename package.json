@@ -14,8 +14,8 @@
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "prepare": "lefthook install",
-    "db:migrate": "prisma migrate deploy --config prisma/prisma.config.ts",
-    "db:migrate:dev": "prisma migrate dev --config prisma/prisma.config.ts",
+    "db:migrate": "prisma migrate deploy --config prisma.config.ts",
+    "db:migrate:dev": "prisma migrate dev --config prisma.config.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "npm run db:migrate && npm run db:seed"
   },

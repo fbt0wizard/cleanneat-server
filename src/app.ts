@@ -4,6 +4,7 @@ import type { Dependencies } from '@infrastructure/di';
 import type { FastifyInstance } from 'fastify';
 import actionLogsController from './features/action-logs/action-logs-controller';
 import authController from './features/auth/auth-controller';
+import faqController from './features/faq/faq-controller';
 import servicesController from './features/services/services-controller';
 import usersController from './features/users/users-controller';
 import authenticatePlugin from './plugins/authenticate';
@@ -106,6 +107,7 @@ export async function app(fastify: FastifyInstance, dependencies: Dependencies) 
   await fastify.register(authController);
   await fastify.register(usersController);
   await fastify.register(servicesController);
+  await fastify.register(faqController);
   await fastify.register(actionLogsController);
 
   return fastify;
