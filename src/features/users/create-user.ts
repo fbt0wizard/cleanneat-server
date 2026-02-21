@@ -27,6 +27,7 @@ export type CreateUserParams = z.input<typeof paramsSchema>;
 export type CreateUserResult =
   | { type: "success"; user: { id: string; name: string; email: string } }
   | { type: "email_taken" }
+  | { type: "email_failed" }
   | { type: "error" };
 
 export async function createUser(
@@ -83,12 +84,21 @@ export async function createUser(
       deps
     );
 
-    await deps.mailer.sendUserCredentials(
-      createdUser.email,
-      createdUser.name,
-      createdUser.email,
-      password,
-    );
+    try {
+      await deps.mailer.sendUserCredentials(
+        createdUser.email,
+        createdUser.name,
+        createdUser.email,
+        password,
+      );
+    } catch (error_) {
+      await repositories.usersRepository.delete(createdUser.id);
+      logger.warn(
+        { err: error_, userId: createdUser.id, email: createdUser.email },
+        "Credentials email failed; rolled back user"
+      );
+      return { type: "email_failed" };
+    }
 
     return {
       type: "success",

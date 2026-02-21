@@ -37,11 +37,13 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
   const transporter = nodemailer.createTransport({
     host: mail.host,
     port: mail.port,
-    secure: mail.secure,
     auth:
       mail.user && mail.pass
         ? { user: mail.user, pass: mail.pass }
         : undefined,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
   });
 
   let template: Handlebars.TemplateDelegate | null = null;
@@ -50,6 +52,8 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
     template ??= loadTemplate('user-credentials');
     return template;
   }
+
+  const SEND_TIMEOUT_MS = 15_000;
 
   return {
     async sendUserCredentials(to: string, name: string, email: string, password: string) {
@@ -60,16 +64,22 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
           password,
         });
 
-        await transporter.sendMail({
+        const sendPromise = transporter.sendMail({
           from: mail.fromName ? `"${mail.fromName}" <${mail.from}>` : mail.from,
           to,
           subject: 'Your account credentials',
           html,
         });
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Email send timeout')), SEND_TIMEOUT_MS);
+        });
+
+        await Promise.race([sendPromise, timeoutPromise]);
         logger.info({ to }, 'Credentials email sent');
       } catch (err) {
         logger.warn({ err, to }, 'Failed to send credentials email');
-        // Don't throw – user is already created; email failure is non-fatal
+        throw err;
       }
     },
   };

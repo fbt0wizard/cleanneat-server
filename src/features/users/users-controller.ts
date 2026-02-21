@@ -77,6 +77,14 @@ export default async function usersController(fastify: FastifyInstance) {
         .with({ type: "email_taken" }, () =>
           reply.status(409).send({ message: "Email already registered", statusCode: 409 }),
         )
+        .with({ type: "email_failed" }, () =>
+          reply
+            .status(503)
+            .send({
+              message: "Could not deliver credentials email; user was not created",
+              statusCode: 503,
+            }),
+        )
         .with({ type: "error" }, () =>
           reply.status(500).send({ message: "Internal server error", statusCode: 500 }),
         )
