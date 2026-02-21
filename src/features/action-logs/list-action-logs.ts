@@ -12,6 +12,8 @@ export type ListActionLogsResult = {
   logs: Array<{
     id: string;
     userId: string;
+    user_name: string;
+    user_email: string;
     action: string;
     entityType: string | null;
     entityId: string | null;
@@ -35,16 +37,25 @@ export async function listActionLogs(
       )
     : await repositories.actionLogsRepository.findAll(validated.limit);
 
+  const userIds = [...new Set(logs.map((log) => log.userId))];
+  const users = await repositories.usersRepository.findByIds(userIds);
+  const userMap = new Map(users.map((u) => [u.id, { name: u.name, email: u.email }]));
+
   return {
     type: "success",
-    logs: logs.map((log) => ({
-      id: log.id,
-      userId: log.userId,
-      action: log.action,
-      entityType: log.entityType,
-      entityId: log.entityId,
-      details: log.details,
-      created_at: log.created_at.toISOString(),
-    })),
+    logs: logs.map((log) => {
+      const user = userMap.get(log.userId);
+      return {
+        id: log.id,
+        userId: log.userId,
+        user_name: user?.name ?? "",
+        user_email: user?.email ?? "",
+        action: log.action,
+        entityType: log.entityType,
+        entityId: log.entityId,
+        details: log.details,
+        created_at: log.created_at.toISOString(),
+      };
+    }),
   };
 }

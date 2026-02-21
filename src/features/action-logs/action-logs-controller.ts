@@ -34,6 +34,8 @@ export default async function actionLogsController(fastify: FastifyInstance) {
                 properties: {
                   id: { type: "string" },
                   userId: { type: "string" },
+                  user_name: { type: "string" },
+                  user_email: { type: "string" },
                   action: { type: "string" },
                   entityType: { type: "string", nullable: true },
                   entityId: { type: "string", nullable: true },

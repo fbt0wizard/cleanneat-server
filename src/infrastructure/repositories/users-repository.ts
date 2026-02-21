@@ -37,6 +37,14 @@ export function makeUsersRepository(db: PrismaClient): UsersRepository {
       return toEntity(record);
     },
 
+    async findByIds(ids) {
+      if (ids.length === 0) return [];
+      const records = await db.user.findMany({
+        where: { id: { in: ids } },
+      });
+      return records.map(toEntity);
+    },
+
     async findAll() {
       const records = await db.user.findMany({ orderBy: { created_at: "desc" } });
       return records.map(toEntity);
