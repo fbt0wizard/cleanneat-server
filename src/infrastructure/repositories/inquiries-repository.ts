@@ -1,6 +1,6 @@
 import { Inquiry } from '@domain/entities';
 import type { InquiriesRepository } from '@domain/repositories';
-import type { Inquiry as InquiryModel, PrismaClient } from '@prisma/client';
+import { type Inquiry as InquiryModel, Prisma, type PrismaClient } from '@prisma/client';
 
 export function makeInquiriesRepository(db: PrismaClient): InquiriesRepository {
   return {
@@ -30,6 +30,34 @@ export function makeInquiriesRepository(db: PrismaClient): InquiriesRepository {
         },
       });
       return toEntity(record);
+    },
+
+    async findAll() {
+      const records = await db.inquiry.findMany({
+        orderBy: { created_at: 'desc' },
+      });
+      return records.map(toEntity);
+    },
+
+    async findById(id) {
+      const record = await db.inquiry.findUnique({ where: { id } });
+      if (!record) return null;
+      return toEntity(record);
+    },
+
+    async updateStatus(id, status) {
+      try {
+        const record = await db.inquiry.update({
+          where: { id },
+          data: { status },
+        });
+        return toEntity(record);
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          return null;
+        }
+        throw error;
+      }
     },
   };
 }

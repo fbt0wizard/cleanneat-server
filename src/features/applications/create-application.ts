@@ -33,7 +33,7 @@ export async function createApplication(
   params: CreateApplicationParams,
   deps: UseCaseDependencies,
 ): Promise<CreateApplicationResult> {
-  const { logger, repositories } = deps;
+  const { logger, repositories, mailer } = deps;
 
   const parsed = bodySchema.safeParse(params);
   if (!parsed.success) {
@@ -70,6 +70,16 @@ export async function createApplication(
     await repositories.applicationsRepository.create(application);
 
     logger.info({ applicationId, email: validated.email, full_name: validated.full_name }, 'Job application submitted');
+
+    try {
+      await mailer.sendApplicationConfirmation(validated.email, validated.full_name, applicationId);
+    } catch (error_) {
+      const err = error_ instanceof Error ? error_ : new Error(String(error_));
+      logger.warn(
+        { err: err.message, applicationId, email: validated.email },
+        'Application confirmation email failed; application already saved',
+      );
+    }
 
     return { type: 'success', id: applicationId };
   } catch (error) {

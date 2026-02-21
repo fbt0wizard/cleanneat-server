@@ -10,6 +10,7 @@ export type MailConfig = NonNullable<ApplicationConfig['mail']>;
 export interface Mailer {
   sendUserCredentials(to: string, name: string, email: string, password: string): Promise<void>;
   sendInquiryConfirmation(to: string, fullName: string, inquiryId: string): Promise<void>;
+  sendApplicationConfirmation(to: string, fullName: string, applicationId: string): Promise<void>;
 }
 
 function getTemplatesDir(): string {
@@ -35,6 +36,9 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
       async sendInquiryConfirmation() {
         // no-op
       },
+      async sendApplicationConfirmation() {
+        // no-op
+      },
     };
   }
 
@@ -51,6 +55,7 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
 
   let credentialsTemplate: Handlebars.TemplateDelegate | null = null;
   let inquiryConfirmationTemplate: Handlebars.TemplateDelegate | null = null;
+  let applicationConfirmationTemplate: Handlebars.TemplateDelegate | null = null;
 
   function getCredentialsTemplate(): Handlebars.TemplateDelegate {
     credentialsTemplate ??= loadTemplate('user-credentials');
@@ -60,6 +65,11 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
   function getInquiryConfirmationTemplate(): Handlebars.TemplateDelegate {
     inquiryConfirmationTemplate ??= loadTemplate('inquiry-confirmation');
     return inquiryConfirmationTemplate;
+  }
+
+  function getApplicationConfirmationTemplate(): Handlebars.TemplateDelegate {
+    applicationConfirmationTemplate ??= loadTemplate('application-confirmation');
+    return applicationConfirmationTemplate;
   }
 
   const SEND_TIMEOUT_MS = 30_000;
@@ -114,6 +124,32 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
         logger.info({ to, inquiryId }, 'Inquiry confirmation email sent');
       } catch (err) {
         logger.warn({ err, to, inquiryId }, 'Failed to send inquiry confirmation email');
+        throw err;
+      }
+    },
+
+    async sendApplicationConfirmation(to: string, fullName: string, applicationId: string) {
+      try {
+        const html = getApplicationConfirmationTemplate()({
+          fullName,
+          applicationId,
+        });
+
+        const sendPromise = transporter.sendMail({
+          from: mail.fromName ? `"${mail.fromName}" <${mail.from}>` : mail.from,
+          to,
+          subject: 'We received your job application',
+          html,
+        });
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Email send timeout')), SEND_TIMEOUT_MS);
+        });
+
+        await Promise.race([sendPromise, timeoutPromise]);
+        logger.info({ to, applicationId }, 'Application confirmation email sent');
+      } catch (err) {
+        logger.warn({ err, to, applicationId }, 'Failed to send application confirmation email');
         throw err;
       }
     },
