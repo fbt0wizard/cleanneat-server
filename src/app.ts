@@ -20,6 +20,9 @@ export async function app(fastify: FastifyInstance, dependencies: Dependencies) 
     'https://preview--clean-neat-home.base44.app',
     'https://clean-neat-home.base44.app',
     'http://localhost:5173',
+    'https://api.cleanneat.co.uk',        // Add this
+    'https://cleanneat.co.uk',             // Maybe also the main domain if needed
+    'https://www.cleanneat.co.uk',         // And www if applicable
   ];
   const corsOrigin = config.corsOrigin ?? allowedOrigins;
 
