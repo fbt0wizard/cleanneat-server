@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.npm
+npm-debug.log*
+.env
+
+# Editor files
+.idea/
+.vscode/
+
+# Claude Code
+.claude/settings.local.json

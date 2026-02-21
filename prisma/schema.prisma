@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id         String      @id @default(uuid())
+  name       String
+  email      String      @unique
+  password   String
+  created_at DateTime    @default(now()) @map("created_at")
+  updated_at DateTime    @updatedAt @map("updated_at")
+  services   Service[]
+  actionLogs ActionLog[]
+
+  @@map("users")
+}
+
+model Service {
+  id                String   @id @default(uuid())
+  title             String
+  slug              String
+  shortDescription  String   @map("short_description")
+  longDescription   String   @db.Text @map("long_description")
+  whatsIncluded     String[] @map("whats_included")
+  whatsNotIncluded  String[] @map("whats_not_included")
+  typicalDuration   String   @map("typical_duration")
+  priceFrom         String   @map("price_from")
+  imageUrl          String?  @map("image_url")
+  isPublished       Boolean  @default(false) @map("is_published")
+  sortOrder         Int      @default(0) @map("sort_order")
+  userId            String   @map("user_id")
+  created_at        DateTime @default(now()) @map("created_at")
+  updated_at        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([slug])
+  @@index([userId])
+  @@map("services")
+}
+
+model ActionLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  details    String?  @db.Text
+  created_at DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([created_at])
+  @@index([action])
+  @@map("action_logs")
+}

@@ -1,0 +1,26 @@
+{
+  "include": ["src", "tests"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@domain/*": ["src/domain/*"],
+      "@infrastructure/*": ["src/infrastructure/*"]
+    },
+    "target": "esnext",
+    "lib": ["esnext"],
+    "module": "esnext",
+    "outDir": "./dist",
+    "types": ["node", "vitest/globals"],
+    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "isolatedModules": false,
+    "removeComments": true,
+    "noStrictGenericChecks": false
+  }
+}
