@@ -1,13 +1,25 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { User } from "@domain/entities";
 import type { UseCaseDependencies } from "@infrastructure/di";
 import { z } from "zod";
 import { logAction } from "../action-logs/log-action";
 
+const SAFE_ALPHABET =
+  "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*";
+const DEFAULT_PASSWORD_LENGTH = 16;
+
+function generateRandomPassword(length = DEFAULT_PASSWORD_LENGTH): string {
+  const bytes = randomBytes(length);
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += SAFE_ALPHABET[bytes[i]! % SAFE_ALPHABET.length];
+  }
+  return result;
+}
+
 const paramsSchema = z.object({
   name: z.string().min(1).max(255),
   email: z.string().email().max(255),
-  password: z.string().min(8).max(255),
   createdByUserId: z.string().uuid(),
 });
 
@@ -41,11 +53,13 @@ export async function createUser(
   }
 
   try {
+    const password = generateRandomPassword();
+
     const user = new User({
       id: randomUUID(),
       name: validated.name,
       email: validated.email,
-      password: validated.password,
+      password,
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -66,6 +80,13 @@ export async function createUser(
         details: `Created user ${createdUser.email}`,
       },
       deps
+    );
+
+    await deps.mailer.sendUserCredentials(
+      createdUser.email,
+      createdUser.name,
+      createdUser.email,
+      password,
     );
 
     return {

@@ -4,18 +4,19 @@ import { createUser } from "./create-user";
 import { listUsers } from "./list-users";
 
 export default async function usersController(fastify: FastifyInstance) {
-  fastify.route<{ Body: { name: string; email: string; password: string } }>({
+  fastify.route<{ Body: { name: string; email: string } }>({
     method: "POST",
     url: "/api/v1/users",
     preHandler: [fastify.authenticate],
     schema: {
       summary: "Create a new user",
-      description: "Create a new user. Requires authentication.",
+      description:
+        "Create a new user with a randomly generated password. Credentials are sent to the user by email. Requires authentication.",
       tags: ["users"],
       security: [{ bearerAuth: [] }],
       body: {
         type: "object",
-        required: ["name", "email", "password"],
+        required: ["name", "email"],
         properties: {
           name: {
             type: "string",
@@ -28,15 +29,8 @@ export default async function usersController(fastify: FastifyInstance) {
             type: "string",
             format: "email",
             maxLength: 255,
-            description: "User email address",
+            description: "User email address (credentials will be sent here)",
             example: "john.doe@example.com",
-          },
-          password: {
-            type: "string",
-            minLength: 8,
-            maxLength: 255,
-            description: "User password (minimum 8 characters)",
-            example: "securePassword123",
           },
         },
       },
@@ -70,7 +64,6 @@ export default async function usersController(fastify: FastifyInstance) {
         {
           name: request.body.name,
           email: request.body.email,
-          password: request.body.password,
           createdByUserId: userId,
         },
         fastify.dependencies,
