@@ -37,13 +37,15 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
   const transporter = nodemailer.createTransport({
     host: mail.host,
     port: mail.port,
+    secure: false,
+    requireTLS: true,
     auth:
       mail.user && mail.pass
         ? { user: mail.user, pass: mail.pass }
         : undefined,
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 15_000,
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 30_000,
   });
 
   let template: Handlebars.TemplateDelegate | null = null;
@@ -53,7 +55,7 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
     return template;
   }
 
-  const SEND_TIMEOUT_MS = 15_000;
+  const SEND_TIMEOUT_MS = 30_000;
 
   return {
     async sendUserCredentials(to: string, name: string, email: string, password: string) {
