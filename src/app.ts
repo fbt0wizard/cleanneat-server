@@ -16,7 +16,11 @@ import swaggerPlugin from './plugins/swagger';
 export async function app(fastify: FastifyInstance, dependencies: Dependencies) {
   const { config } = dependencies;
   const isProduction = config.env === 'production';
-  const corsOrigin = config.corsOrigin ?? true;
+  const allowedOrigins = [
+    'https://preview--clean-neat-home.base44.app',
+    'https://clean-neat-home.base44.app',
+  ];
+  const corsOrigin = config.corsOrigin ?? allowedOrigins;
 
   fastify.addHook('onClose', async () => {
     await dependencies.dispose();
