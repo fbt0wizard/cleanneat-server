@@ -38,11 +38,43 @@ export default async function uploadController(fastify: FastifyInstance) {
     },
   });
 
+  // HTML shown when someone hits /uploads/:filename without auth (looks like a generic "not found" page).
+  const UNAUTHENTICATED_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page not found</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 2rem; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f5f5f5; color: #333; }
+    .box { text-align: center; max-width: 360px; }
+    h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+    p { color: #666; font-size: 0.9375rem; line-height: 1.5; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Page not found</h1>
+    <p>The page you're looking for doesn't exist or has been moved.</p>
+  </div>
+</body>
+</html>`;
+
   // Protected uploads: only authenticated users can read files. Path is /uploads (no /api/v1).
+  // When unauthenticated, return 404 HTML (generic "not found") instead of 401 JSON.
   fastify.route<{ Params: { filename: string } }>({
     method: 'GET',
     url: '/uploads/:filename',
-    preHandler: [fastify.authenticate],
+    preHandler: [
+      async function requireAuth(request, reply) {
+        try {
+          await fastify.authenticate(request);
+        } catch {
+          return reply.status(404).type('text/html').send(UNAUTHENTICATED_HTML);
+        }
+      },
+    ],
     schema: {
       summary: 'Get uploaded file',
       description: 'Serve an uploaded file. Requires authentication. Path: /uploads/:filename (no /api/v1).',
@@ -54,8 +86,7 @@ export default async function uploadController(fastify: FastifyInstance) {
       },
       response: {
         200: { description: 'File content' },
-        401: { $ref: 'ErrorResponse#' },
-        404: { $ref: 'ErrorResponse#' },
+        404: { description: 'Not found' },
       },
     },
     handler: async (request, reply) => {
