@@ -1,4 +1,4 @@
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "@prisma/client";
 import { makeConfig } from "./config";
 import { makeLogger } from "./logger";
@@ -9,7 +9,7 @@ import { makeUsersRepository } from "./repositories/users-repository";
 export async function makeDependencies() {
   const config = makeConfig();
   const logger = makeLogger(config);
-  const adapter = new PrismaPg({ connectionString: config.DATABASE_URL });
+  const adapter = new PrismaMariaDb(config.DATABASE_URL);
   const db = new PrismaClient({
     adapter,
     log: [

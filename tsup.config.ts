@@ -9,6 +9,6 @@ export default defineConfig({
   bundle: true,
   splitting: false,
   treeshake: true,
-  external: ['@prisma/client', '@prisma/adapter-pg'],
+  external: ['@prisma/client', '@prisma/adapter-mariadb'],
   skipNodeModulesBundle: true,
 });
