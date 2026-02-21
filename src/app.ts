@@ -3,11 +3,13 @@ import Helmet from '@fastify/helmet';
 import type { Dependencies } from '@infrastructure/di';
 import type { FastifyInstance } from 'fastify';
 import actionLogsController from './features/action-logs/action-logs-controller';
+import applicationsController from './features/applications/applications-controller';
 import authController from './features/auth/auth-controller';
 import faqController from './features/faq/faq-controller';
 import inquiriesController from './features/inquiries/inquiries-controller';
 import servicesController from './features/services/services-controller';
 import settingsController from './features/settings/settings-controller';
+import uploadController from './features/upload/upload-controller';
 import usersController from './features/users/users-controller';
 import authenticatePlugin from './plugins/authenticate';
 import dependencyInjectionPlugin from './plugins/dependency-injection';
@@ -105,11 +107,13 @@ export async function app(fastify: FastifyInstance, dependencies: Dependencies) 
   await fastify.register(errorHandlerPlugin);
   await fastify.register(healthPlugin);
   await fastify.register(authController);
+  await fastify.register(applicationsController);
   await fastify.register(usersController);
   await fastify.register(servicesController);
   await fastify.register(faqController);
   await fastify.register(inquiriesController);
   await fastify.register(settingsController);
+  await fastify.register(uploadController);
   await fastify.register(actionLogsController);
 
   return fastify;

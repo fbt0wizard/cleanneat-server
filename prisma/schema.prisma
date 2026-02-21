@@ -127,3 +127,28 @@ model Inquiry {
   @@index([created_at])
   @@map("inquiries")
 }
+
+model Application {
+  id                                String   @id
+  full_name                         String   @map("full_name")
+  email                             String   @map("email")
+  phone                             String   @map("phone")
+  location_postcode                  String   @map("location_postcode")
+  role_type                         Json     @map("role_type")
+  availability                      Json     @map("availability")
+  experience_summary                 String   @db.Text @map("experience_summary")
+  right_to_work_uk                   Boolean  @map("right_to_work_uk")
+  dbs_status                        String   @map("dbs_status")
+  references_contact_details         String   @db.Text @map("references_contact_details")
+  cv_file_url                       String   @map("cv_file_url")
+  id_file_url                       String?  @map("id_file_url")
+  consent_recruitment_data_processing Boolean @map("consent_recruitment_data_processing")
+  status                            String   @default("new") @map("status")
+  internal_notes                     Json     @default("[]") @map("internal_notes")
+  created_at                        DateTime @default(now()) @map("created_at")
+  updated_at                        DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([created_at])
+  @@map("applications")
+}

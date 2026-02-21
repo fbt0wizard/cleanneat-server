@@ -4,6 +4,7 @@ import { makeConfig } from './config';
 import { makeMailer } from './email/mailer';
 import { makeLogger } from './logger';
 import { makeActionLogsRepository } from './repositories/action-logs-repository';
+import { makeApplicationsRepository } from './repositories/applications-repository';
 import { makeFaqsRepository } from './repositories/faqs-repository';
 import { makeInquiriesRepository } from './repositories/inquiries-repository';
 import { makeServicesRepository } from './repositories/services-repository';
@@ -33,6 +34,7 @@ export async function makeDependencies() {
   const faqsRepository = makeFaqsRepository(db);
   const settingsRepository = makeSettingsRepository(db);
   const inquiriesRepository = makeInquiriesRepository(db);
+  const applicationsRepository = makeApplicationsRepository(db);
   const mailer = makeMailer(config, logger);
 
   return {
@@ -47,6 +49,7 @@ export async function makeDependencies() {
       faqsRepository,
       settingsRepository,
       inquiriesRepository,
+      applicationsRepository,
     },
     dispose: async () => {
       await db.$disconnect();

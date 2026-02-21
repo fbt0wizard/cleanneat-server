@@ -4,6 +4,7 @@ coverage/
 .npm
 npm-debug.log*
 .env
+uploads/
 
 # Editor files
 .idea/

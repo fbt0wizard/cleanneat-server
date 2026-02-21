@@ -31,6 +31,9 @@ export function makeConfig() {
     SMTP_PASS: z.string().optional(),
     MAIL_FROM: z.string().email().optional(),
     MAIL_FROM_NAME: z.string().optional(),
+    // Upload (optional – defaults to ./uploads; PUBLIC_URL used for returned file URLs)
+    UPLOAD_DIR: z.string().optional().default('uploads'),
+    PUBLIC_URL: z.string().url().optional(),
   });
 
   const parsedEnv = schema.parse(process.env);
@@ -57,6 +60,8 @@ export function makeConfig() {
     port: parsedEnv.PORT,
     jwtSecret: parsedEnv.JWT_SECRET,
     mail,
+    uploadDir: parsedEnv.UPLOAD_DIR,
+    publicUrl: parsedEnv.PUBLIC_URL ?? null,
   };
 }
 
