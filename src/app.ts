@@ -9,6 +9,7 @@ import faqController from './features/faq/faq-controller';
 import inquiriesController from './features/inquiries/inquiries-controller';
 import servicesController from './features/services/services-controller';
 import settingsController from './features/settings/settings-controller';
+import testimonialsController from './features/testimonials/testimonials-controller';
 import uploadController from './features/upload/upload-controller';
 import usersController from './features/users/users-controller';
 import authenticatePlugin from './plugins/authenticate';
@@ -113,6 +114,7 @@ export async function app(fastify: FastifyInstance, dependencies: Dependencies) 
   await fastify.register(faqController);
   await fastify.register(inquiriesController);
   await fastify.register(settingsController);
+  await fastify.register(testimonialsController);
   await fastify.register(uploadController);
   await fastify.register(actionLogsController);
 

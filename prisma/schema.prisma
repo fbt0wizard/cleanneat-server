@@ -152,3 +152,20 @@ model Application {
   @@index([created_at])
   @@map("applications")
 }
+
+model Testimonial {
+  id             String   @id @default(uuid())
+  name_public    String   @map("name_public")
+  location_public String  @map("location_public")
+  rating         Int      @map("rating")
+  text          String   @db.Text @map("text")
+  status        String   @default("pending") @map("status")
+  is_published  Boolean  @default(false) @map("is_published")
+  created_at    DateTime @default(now()) @map("created_at")
+  updated_at    DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([is_published])
+  @@index([created_at])
+  @@map("testimonials")
+}
