@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { match } from 'ts-pattern';
 import { createTestimonial } from './create-testimonial';
 import { deleteTestimonial } from './delete-testimonial';
+import { listPublishedTestimonials } from './list-published-testimonials';
 import { listTestimonials } from './list-testimonials';
 import { updateTestimonial } from './update-testimonial';
 
@@ -83,6 +84,45 @@ export default async function testimonialsController(fastify: FastifyInstance) {
           reply.status(400).send({ message: `Validation failed: ${message}`, statusCode: 400 }),
         )
         .with({ type: 'error' }, () => reply.status(500).send({ message: 'Internal server error', statusCode: 500 }))
+        .exhaustive();
+    },
+  });
+
+  // GET /api/v1/testimonials/public – public (published only)
+  fastify.route({
+    method: 'GET',
+    url: '/api/v1/testimonials/public',
+    schema: {
+      summary: 'List published testimonials',
+      description: 'Public endpoint. Returns only published testimonials for display on the site.',
+      tags: ['testimonials'],
+      response: {
+        200: {
+          description: 'List of published testimonials',
+          type: 'object',
+          properties: {
+            testimonials: {
+              type: 'array',
+              items: testimonialResponseSchema,
+            },
+          },
+          required: ['testimonials'],
+        },
+        500: { $ref: 'ErrorResponse#' },
+      },
+    },
+    handler: async (_request, reply) => {
+      const result = await listPublishedTestimonials({}, fastify.dependencies);
+      return match(result)
+        .with({ type: 'success' }, ({ testimonials }) =>
+          reply.status(200).send({
+            testimonials: testimonials.map((t) => ({
+              ...toTestimonialResponse(t),
+              created_at: t.created_at.toISOString(),
+              updated_at: t.updated_at.toISOString(),
+            })),
+          }),
+        )
         .exhaustive();
     },
   });

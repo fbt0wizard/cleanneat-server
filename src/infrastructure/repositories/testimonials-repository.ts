@@ -26,6 +26,14 @@ export function makeTestimonialsRepository(db: PrismaClient): TestimonialsReposi
       return records.map(toEntity);
     },
 
+    async findPublished() {
+      const records = await db.testimonial.findMany({
+        where: { is_published: true },
+        orderBy: { created_at: 'desc' },
+      });
+      return records.map(toEntity);
+    },
+
     async findById(id) {
       const record = await db.testimonial.findUnique({ where: { id } });
       if (!record) return null;
