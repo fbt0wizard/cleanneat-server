@@ -50,12 +50,39 @@ const settingsBodySchema = {
 };
 
 export default async function settingsController(fastify: FastifyInstance) {
+  // GET /api/v1/settings/public – unauthenticated (for landing page, footer, etc.)
+  fastify.route({
+    method: 'GET',
+    url: '/api/v1/settings/public',
+    schema: {
+      summary: 'Get settings (public)',
+      description: 'Returns all settings data. No authentication required. Use for public-facing pages.',
+      tags: ['settings'],
+      response: {
+        200: {
+          description: 'Settings retrieved successfully',
+          type: 'object',
+          properties: { settings: settingsResponseSchema },
+          required: ['settings'],
+        },
+        404: { $ref: 'ErrorResponse#' },
+      },
+    },
+    handler: async (_request, reply) => {
+      const result = await getSettings({}, fastify.dependencies);
+      return match(result)
+        .with({ type: 'success' }, ({ settings }) => reply.status(200).send({ settings: toSettingsResponse(settings) }))
+        .with({ type: 'not_found' }, () => reply.status(404).send({ message: 'Settings not found', statusCode: 404 }))
+        .exhaustive();
+    },
+  });
+
   fastify.route({
     method: 'GET',
     url: '/api/v1/settings',
     preHandler: [fastify.authenticate],
     schema: {
-      summary: 'Get settings',
+      summary: 'Get settings (admin)',
       description: 'Returns the current settings. Requires authentication.',
       tags: ['settings'],
       security: [{ bearerAuth: [] }],
@@ -72,12 +99,8 @@ export default async function settingsController(fastify: FastifyInstance) {
     handler: async (_request, reply) => {
       const result = await getSettings({}, fastify.dependencies);
       return match(result)
-        .with({ type: 'success' }, ({ settings }) =>
-          reply.status(200).send({ settings: toSettingsResponse(settings) }),
-        )
-        .with({ type: 'not_found' }, () =>
-          reply.status(404).send({ message: 'Settings not found', statusCode: 404 }),
-        )
+        .with({ type: 'success' }, ({ settings }) => reply.status(200).send({ settings: toSettingsResponse(settings) }))
+        .with({ type: 'not_found' }, () => reply.status(404).send({ message: 'Settings not found', statusCode: 404 }))
         .exhaustive();
     },
   });
@@ -109,15 +132,11 @@ export default async function settingsController(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const result = await upsertSettings(request.body as Parameters<typeof upsertSettings>[0], fastify.dependencies);
       return match(result)
-        .with({ type: 'success' }, ({ settings }) =>
-          reply.status(200).send({ settings: toSettingsResponse(settings) }),
-        )
+        .with({ type: 'success' }, ({ settings }) => reply.status(200).send({ settings: toSettingsResponse(settings) }))
         .with({ type: 'validation_error' }, ({ message }) =>
           reply.status(400).send({ message: `Validation failed: ${message}`, statusCode: 400 }),
         )
-        .with({ type: 'error' }, () =>
-          reply.status(500).send({ message: 'Internal server error', statusCode: 500 }),
-        )
+        .with({ type: 'error' }, () => reply.status(500).send({ message: 'Internal server error', statusCode: 500 }))
         .exhaustive();
     },
   });
