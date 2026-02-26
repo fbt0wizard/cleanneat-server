@@ -1,16 +1,15 @@
-import { randomBytes, randomUUID } from "node:crypto";
-import { User } from "@domain/entities";
-import type { UseCaseDependencies } from "@infrastructure/di";
-import { z } from "zod";
-import { logAction } from "../action-logs/log-action";
+import { randomBytes, randomUUID } from 'node:crypto';
+import { User } from '@domain/entities';
+import type { UseCaseDependencies } from '@infrastructure/di';
+import { z } from 'zod';
+import { logAction } from '../action-logs/log-action';
 
-const SAFE_ALPHABET =
-  "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*";
+const SAFE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*';
 const DEFAULT_PASSWORD_LENGTH = 16;
 
 function generateRandomPassword(length = DEFAULT_PASSWORD_LENGTH): string {
   const bytes = randomBytes(length);
-  let result = "";
+  let result = '';
   for (let i = 0; i < length; i++) {
     result += SAFE_ALPHABET[bytes[i]! % SAFE_ALPHABET.length];
   }
@@ -25,32 +24,21 @@ const paramsSchema = z.object({
 
 export type CreateUserParams = z.input<typeof paramsSchema>;
 export type CreateUserResult =
-  | { type: "success"; user: { id: string; name: string; email: string } }
-  | { type: "email_taken" }
-  | { type: "email_failed" }
-  | { type: "error" };
+  | { type: 'success'; user: { id: string; name: string; email: string } }
+  | { type: 'email_taken' }
+  | { type: 'email_failed' }
+  | { type: 'error' };
 
-export async function createUser(
-  params: CreateUserParams,
-  deps: UseCaseDependencies
-): Promise<CreateUserResult> {
+export async function createUser(params: CreateUserParams, deps: UseCaseDependencies): Promise<CreateUserResult> {
   const { logger, repositories } = deps;
-  logger.info(
-    { email: params.email, createdByUserId: params.createdByUserId },
-    "Creating new user"
-  );
+  logger.info({ email: params.email, createdByUserId: params.createdByUserId }, 'Creating new user');
 
   const validated = paramsSchema.parse(params);
 
-  const existingUser = await repositories.usersRepository.findByEmail(
-    validated.email
-  );
+  const existingUser = await repositories.usersRepository.findByEmail(validated.email);
   if (existingUser) {
-    logger.warn(
-      { email: validated.email },
-      "Create user attempted with existing email"
-    );
-    return { type: "email_taken" };
+    logger.warn({ email: validated.email }, 'Create user attempted with existing email');
+    return { type: 'email_taken' };
   }
 
   try {
@@ -68,40 +56,41 @@ export async function createUser(
 
     const createdUser = await repositories.usersRepository.create(user);
 
-    logger.info(
-      { userId: createdUser.id, email: createdUser.email },
-      "User created successfully"
-    );
+    logger.info({ userId: createdUser.id, email: createdUser.email }, 'User created successfully');
 
     await logAction(
       {
         userId: validated.createdByUserId,
-        action: "create_user",
-        entityType: "user",
+        action: 'create_user',
+        entityType: 'user',
         entityId: createdUser.id,
         details: `Created user ${createdUser.email}`,
       },
-      deps
+      deps,
     );
 
     try {
-      await deps.mailer.sendUserCredentials(
-        createdUser.email,
-        createdUser.name,
-        createdUser.email,
-        password,
-      );
+      await deps.mailer.sendUserCredentials(createdUser.email, createdUser.name, createdUser.email, password);
     } catch (error_) {
       await repositories.usersRepository.delete(createdUser.id);
-      logger.warn(
-        { err: error_, userId: createdUser.id, email: createdUser.email },
-        "Credentials email failed; rolled back user"
+      logger.error(
+        {
+          err: error_,
+          errorMessage: error_.message,
+          errorCode: error_.code,
+          errorCommand: error_.command,
+          errorResponse: error_.response,
+          errorResponseCode: error_.responseCode,
+          userId: createdUser.id,
+          email: createdUser.email,
+        },
+        'Credentials email failed - detailed error',
       );
-      return { type: "email_failed" };
+      return { type: 'email_failed' };
     }
 
     return {
-      type: "success",
+      type: 'success',
       user: {
         id: createdUser.id,
         name: createdUser.name,
@@ -109,7 +98,7 @@ export async function createUser(
       },
     };
   } catch (error) {
-    logger.error({ error, email: validated.email }, "Failed to create user");
-    return { type: "error" };
+    logger.error({ error, email: validated.email }, 'Failed to create user');
+    return { type: 'error' };
   }
 }
