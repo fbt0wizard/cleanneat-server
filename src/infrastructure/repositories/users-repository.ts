@@ -1,11 +1,7 @@
-import { User } from "@domain/entities";
-import type { UsersRepository } from "@domain/repositories";
-import {
-  Prisma,
-  type PrismaClient,
-  type User as UserModel,
-} from "@prisma/client";
-import bcrypt from "bcrypt";
+import { User } from '@domain/entities';
+import type { UsersRepository } from '@domain/repositories';
+import { Prisma, type PrismaClient, type User as UserModel } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 export function makeUsersRepository(db: PrismaClient): UsersRepository {
   return {
@@ -48,7 +44,7 @@ export function makeUsersRepository(db: PrismaClient): UsersRepository {
     },
 
     async findAll() {
-      const records = await db.user.findMany({ orderBy: { created_at: "desc" } });
+      const records = await db.user.findMany({ orderBy: { created_at: 'desc' } });
       return records.map(toEntity);
     },
 
@@ -62,7 +58,25 @@ export function makeUsersRepository(db: PrismaClient): UsersRepository {
         });
         return toEntity(record);
       } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          return null;
+        }
+        throw error;
+      }
+    },
+
+    async updatePassword(id, newPassword) {
+      try {
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const record = await db.user.update({
+          where: { id },
+          data: {
+            password: hashedPassword,
+          },
+        });
+        return toEntity(record);
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
           return null;
         }
         throw error;
@@ -74,7 +88,7 @@ export function makeUsersRepository(db: PrismaClient): UsersRepository {
         await db.user.delete({ where: { id } });
         return true;
       } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
           return false;
         }
         throw error;

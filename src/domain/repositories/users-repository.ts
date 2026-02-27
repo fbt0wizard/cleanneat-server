@@ -7,5 +7,6 @@ export interface UsersRepository {
   findByIds(ids: string[]): Promise<User[]>;
   findAll(): Promise<User[]>;
   update(id: string, updates: { isActive?: boolean }): Promise<User | null>;
+  updatePassword(id: string, newPassword: string): Promise<User | null>;
   delete(id: string): Promise<boolean>;
 }
