@@ -41,6 +41,7 @@ const SETTINGS_KEYS: (keyof SettingsUpdate)[] = [
   'social_linkedin',
   'logo_url',
   'favicon_url',
+  'who_we_support',
 ];
 
 function toPrismaData(updates: SettingsUpdate): Record<string, unknown> {
@@ -52,6 +53,42 @@ function toPrismaData(updates: SettingsUpdate): Record<string, unknown> {
 }
 
 function toEntity(record: SettingsModel): Settings {
+  const whoWeSupport =
+    record.who_we_support && typeof record.who_we_support === 'object'
+      ? (record.who_we_support as {
+          section_title?: unknown;
+          section_intro?: unknown;
+          groups?: unknown;
+        })
+      : null;
+
+  const parsedWhoWeSupport =
+    whoWeSupport &&
+    typeof whoWeSupport.section_title === 'string' &&
+    typeof whoWeSupport.section_intro === 'string' &&
+    Array.isArray(whoWeSupport.groups)
+      ? {
+          section_title: whoWeSupport.section_title,
+          section_intro: whoWeSupport.section_intro,
+          groups: whoWeSupport.groups.flatMap((group) => {
+            if (
+              group &&
+              typeof group === 'object' &&
+              typeof (group as { label?: unknown }).label === 'string' &&
+              typeof (group as { description?: unknown }).description === 'string'
+            ) {
+              return [
+                {
+                  label: (group as { label: string }).label,
+                  description: (group as { description: string }).description,
+                },
+              ];
+            }
+            return [];
+          }),
+        }
+      : null;
+
   return new Settings({
     id: record.id,
     primary_phone: record.primary_phone,
@@ -72,6 +109,7 @@ function toEntity(record: SettingsModel): Settings {
     social_linkedin: record.social_linkedin,
     logo_url: record.logo_url,
     favicon_url: record.favicon_url,
+    who_we_support: parsedWhoWeSupport,
     updated_at: record.updated_at,
   });
 }

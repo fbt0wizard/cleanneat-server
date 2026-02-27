@@ -1,3 +1,14 @@
+export type WhoWeSupportGroup = {
+  label: string;
+  description: string;
+};
+
+export type WhoWeSupportSection = {
+  section_title: string;
+  section_intro: string;
+  groups: WhoWeSupportGroup[];
+};
+
 export interface SettingsData {
   primary_phone?: string | null;
   primary_email?: string | null;
@@ -15,6 +26,7 @@ export interface SettingsData {
   social_linkedin?: string | null;
   logo_url?: string | null;
   favicon_url?: string | null;
+  who_we_support?: WhoWeSupportSection | null;
 }
 
 export class Settings {
@@ -35,6 +47,7 @@ export class Settings {
   readonly social_linkedin: string | null;
   readonly logo_url: string | null;
   readonly favicon_url: string | null;
+  readonly who_we_support: WhoWeSupportSection | null;
   readonly updated_at: Date;
 
   constructor(params: { id: string; updated_at: Date } & SettingsData) {
@@ -56,5 +69,6 @@ export class Settings {
     this.social_linkedin = params.social_linkedin ?? null;
     this.logo_url = params.logo_url ?? null;
     this.favicon_url = params.favicon_url ?? null;
+    this.who_we_support = params.who_we_support ?? null;
   }
 }

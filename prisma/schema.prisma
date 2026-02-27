@@ -94,6 +94,7 @@ model Settings {
   social_linkedin       String?  @map("social_linkedin")
   logo_url              String?  @map("logo_url")
   favicon_url           String?  @map("favicon_url")
+  who_we_support        Json?    @map("who_we_support")
   updated_at            DateTime @updatedAt @map("updated_at")
 
   @@map("settings")

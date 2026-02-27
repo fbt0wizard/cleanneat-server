@@ -17,6 +17,14 @@ export type SettingsUpdate = Partial<{
   social_linkedin: string | null;
   logo_url: string | null;
   favicon_url: string | null;
+  who_we_support: {
+    section_title: string;
+    section_intro: string;
+    groups: Array<{
+      label: string;
+      description: string;
+    }>;
+  } | null;
 }>;
 
 export interface SettingsRepository {

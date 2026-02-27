@@ -21,6 +21,21 @@ const bodySchema = z
     social_linkedin: z.string().url().max(500).nullable().optional(),
     logo_url: z.string().url().max(500).nullable().optional(),
     favicon_url: z.string().url().max(500).nullable().optional(),
+    who_we_support: z
+      .object({
+        section_title: z.string().min(1).max(255),
+        section_intro: z.string().min(1).max(5000),
+        groups: z
+          .array(
+            z.object({
+              label: z.string().min(1).max(255),
+              description: z.string().min(1).max(2000),
+            }),
+          )
+          .max(100),
+      })
+      .nullable()
+      .optional(),
   })
   .strict();
 
@@ -64,6 +79,7 @@ export async function upsertSettings(
       'social_linkedin',
       'logo_url',
       'favicon_url',
+      'who_we_support',
     ];
     for (const key of keys) {
       if (validated[key] !== undefined) updates[key] = validated[key];
@@ -72,10 +88,7 @@ export async function upsertSettings(
     return { type: 'success', settings };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error(
-      { err: { message: err.message, name: err.name, stack: err.stack } },
-      'Failed to upsert settings',
-    );
+    logger.error({ err: { message: err.message, name: err.name, stack: err.stack } }, 'Failed to upsert settings');
     return { type: 'error' };
   }
 }

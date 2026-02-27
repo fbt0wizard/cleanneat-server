@@ -18,5 +18,6 @@ export function toSettingsResponse(settings: Settings) {
     social_linkedin: settings.social_linkedin,
     logo_url: settings.logo_url,
     favicon_url: settings.favicon_url,
+    who_we_support: settings.who_we_support,
   };
 }

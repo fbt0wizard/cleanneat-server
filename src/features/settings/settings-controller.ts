@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { match } from 'ts-pattern';
 import { getSettings } from './get-settings';
+import { getWhoWeSupport } from './get-who-we-support';
 import { toSettingsResponse } from './settings-response';
 import { upsertSettings } from './upsert-settings';
+import { upsertWhoWeSupport } from './upsert-who-we-support';
 
 const settingsResponseSchema = {
   type: 'object',
@@ -49,6 +51,26 @@ const settingsBodySchema = {
   },
 };
 
+const whoWeSupportSchema = {
+  type: 'object',
+  properties: {
+    section_title: { type: 'string' },
+    section_intro: { type: 'string' },
+    groups: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          label: { type: 'string' },
+          description: { type: 'string' },
+        },
+        required: ['label', 'description'],
+      },
+    },
+  },
+  required: ['section_title', 'section_intro', 'groups'],
+};
+
 export default async function settingsController(fastify: FastifyInstance) {
   // GET /api/v1/settings/public – unauthenticated (for landing page, footer, etc.)
   fastify.route({
@@ -73,6 +95,29 @@ export default async function settingsController(fastify: FastifyInstance) {
       return match(result)
         .with({ type: 'success' }, ({ settings }) => reply.status(200).send({ settings: toSettingsResponse(settings) }))
         .with({ type: 'not_found' }, () => reply.status(404).send({ message: 'Settings not found', statusCode: 404 }))
+        .exhaustive();
+    },
+  });
+
+  fastify.route({
+    method: 'GET',
+    url: '/api/v1/settings/who-we-support',
+    schema: {
+      summary: 'Get who we support content',
+      description: 'Returns who-we-support section content.',
+      tags: ['settings'],
+      response: {
+        200: whoWeSupportSchema,
+        404: { $ref: 'ErrorResponse#' },
+      },
+    },
+    handler: async (_request, reply) => {
+      const result = await getWhoWeSupport({}, fastify.dependencies);
+      return match(result)
+        .with({ type: 'success' }, ({ who_we_support }) => reply.status(200).send(who_we_support))
+        .with({ type: 'not_found' }, () =>
+          reply.status(404).send({ message: 'Who we support settings not found', statusCode: 404 }),
+        )
         .exhaustive();
     },
   });
@@ -133,6 +178,42 @@ export default async function settingsController(fastify: FastifyInstance) {
       const result = await upsertSettings(request.body as Parameters<typeof upsertSettings>[0], fastify.dependencies);
       return match(result)
         .with({ type: 'success' }, ({ settings }) => reply.status(200).send({ settings: toSettingsResponse(settings) }))
+        .with({ type: 'validation_error' }, ({ message }) =>
+          reply.status(400).send({ message: `Validation failed: ${message}`, statusCode: 400 }),
+        )
+        .with({ type: 'error' }, () => reply.status(500).send({ message: 'Internal server error', statusCode: 500 }))
+        .exhaustive();
+    },
+  });
+
+  fastify.route<{
+    Body: Record<string, unknown>;
+  }>({
+    method: 'PATCH',
+    url: '/api/v1/settings/who-we-support',
+    preHandler: [fastify.authenticate],
+    schema: {
+      summary: 'Create or update who we support content',
+      description: 'Creates who-we-support settings when missing, otherwise updates existing data.',
+      tags: ['settings'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        ...whoWeSupportSchema,
+        additionalProperties: false,
+      },
+      response: {
+        200: whoWeSupportSchema,
+        400: { $ref: 'ErrorResponse#' },
+        500: { $ref: 'ErrorResponse#' },
+      },
+    },
+    handler: async (request, reply) => {
+      const result = await upsertWhoWeSupport(
+        request.body as Parameters<typeof upsertWhoWeSupport>[0],
+        fastify.dependencies,
+      );
+      return match(result)
+        .with({ type: 'success' }, ({ who_we_support }) => reply.status(200).send(who_we_support))
         .with({ type: 'validation_error' }, ({ message }) =>
           reply.status(400).send({ message: `Validation failed: ${message}`, statusCode: 400 }),
         )
