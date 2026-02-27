@@ -1,7 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { match } from 'ts-pattern';
+import { addApplicationNote } from './add-application-note';
 import { toApplicationResponse } from './application-response';
 import { createApplication } from './create-application';
+import { deleteApplicationNote } from './delete-application-note';
 import { listApplications } from './list-applications';
 import { markApplicationRead } from './mark-application-read';
 import { updateApplicationStatus } from './update-application-status';
@@ -24,7 +26,18 @@ const applicationResponseSchema = {
     id_file_url: { type: 'string', nullable: true },
     consent_recruitment_data_processing: { type: 'boolean' },
     status: { type: 'string' },
-    internal_notes: { type: 'array', items: { type: 'string' } },
+    internal_notes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          text: { type: 'string' },
+          writer_name: { type: 'string' },
+          written_at: { type: 'string', format: 'date-time' },
+        },
+        required: ['text', 'writer_name', 'written_at'],
+      },
+    },
     created_at: { type: 'string', format: 'date-time' },
     updated_at: { type: 'string', format: 'date-time' },
   },
@@ -256,6 +269,146 @@ export default async function applicationsController(fastify: FastifyInstance) {
         .with({ type: 'not_found' }, () =>
           reply.status(404).send({ message: 'Application not found', statusCode: 404 }),
         )
+        .with({ type: 'validation_error' }, ({ message }) =>
+          reply.status(400).send({ message: `Validation failed: ${message}`, statusCode: 400 }),
+        )
+        .with({ type: 'error' }, () => reply.status(500).send({ message: 'Internal server error', statusCode: 500 }))
+        .exhaustive();
+    },
+  });
+
+  // PATCH /api/v1/applications/:id/notes – authenticated (add note with writer + timestamp)
+  fastify.route<{
+    Params: { id: string };
+    Body: { note: string };
+  }>({
+    method: 'PATCH',
+    url: '/api/v1/applications/:id/notes',
+    preHandler: [fastify.authenticate],
+    schema: {
+      summary: 'Add application note',
+      description: 'Append a note to application with writer name and timestamp. Requires authentication.',
+      tags: ['applications'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: { id: { type: 'string' } },
+      },
+      body: {
+        type: 'object',
+        required: ['note'],
+        properties: {
+          note: { type: 'string', minLength: 1, maxLength: 5000 },
+        },
+      },
+      response: {
+        200: {
+          description: 'Application note added',
+          type: 'object',
+          properties: { application: applicationResponseSchema },
+          required: ['application'],
+        },
+        401: { $ref: 'ErrorResponse#' },
+        400: { $ref: 'ErrorResponse#' },
+        404: { $ref: 'ErrorResponse#' },
+        500: { $ref: 'ErrorResponse#' },
+      },
+    },
+    handler: async (request, reply) => {
+      const userId = request.userId;
+      if (!userId) return reply.status(401).send({ message: 'Unauthorized', statusCode: 401 });
+
+      const result = await addApplicationNote(
+        {
+          applicationId: request.params.id,
+          note: request.body.note,
+          userId,
+        },
+        fastify.dependencies,
+      );
+
+      return match(result)
+        .with({ type: 'success' }, ({ application }) =>
+          reply.status(200).send({
+            application: {
+              ...toApplicationResponse(application),
+              created_at: application.created_at.toISOString(),
+              updated_at: application.updated_at.toISOString(),
+            },
+          }),
+        )
+        .with({ type: 'not_found' }, () =>
+          reply.status(404).send({ message: 'Application not found', statusCode: 404 }),
+        )
+        .with({ type: 'validation_error' }, ({ message }) =>
+          reply.status(400).send({ message: `Validation failed: ${message}`, statusCode: 400 }),
+        )
+        .with({ type: 'error' }, () => reply.status(500).send({ message: 'Internal server error', statusCode: 500 }))
+        .exhaustive();
+    },
+  });
+
+  // DELETE /api/v1/applications/:id/notes/:noteIndex – authenticated (delete note by index)
+  fastify.route<{
+    Params: { id: string; noteIndex: string };
+  }>({
+    method: 'DELETE',
+    url: '/api/v1/applications/:id/notes/:noteIndex',
+    preHandler: [fastify.authenticate],
+    schema: {
+      summary: 'Delete application note',
+      description: 'Delete an application note by index position. Requires authentication.',
+      tags: ['applications'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id', 'noteIndex'],
+        properties: {
+          id: { type: 'string' },
+          noteIndex: { type: 'integer', minimum: 0 },
+        },
+      },
+      response: {
+        200: {
+          description: 'Application note deleted',
+          type: 'object',
+          properties: { application: applicationResponseSchema },
+          required: ['application'],
+        },
+        401: { $ref: 'ErrorResponse#' },
+        400: { $ref: 'ErrorResponse#' },
+        404: { $ref: 'ErrorResponse#' },
+        500: { $ref: 'ErrorResponse#' },
+      },
+    },
+    handler: async (request, reply) => {
+      const userId = request.userId;
+      if (!userId) return reply.status(401).send({ message: 'Unauthorized', statusCode: 401 });
+
+      const result = await deleteApplicationNote(
+        {
+          applicationId: request.params.id,
+          noteIndex: request.params.noteIndex,
+          userId,
+        },
+        fastify.dependencies,
+      );
+
+      return match(result)
+        .with({ type: 'success' }, ({ application }) =>
+          reply.status(200).send({
+            application: {
+              ...toApplicationResponse(application),
+              created_at: application.created_at.toISOString(),
+              updated_at: application.updated_at.toISOString(),
+            },
+          }),
+        )
+        .with({ type: 'not_found' }, () =>
+          reply.status(404).send({ message: 'Application not found', statusCode: 404 }),
+        )
+        .with({ type: 'note_not_found' }, () => reply.status(404).send({ message: 'Note not found', statusCode: 404 }))
         .with({ type: 'validation_error' }, ({ message }) =>
           reply.status(400).send({ message: `Validation failed: ${message}`, statusCode: 400 }),
         )

@@ -1,4 +1,4 @@
-import { Application } from '@domain/entities';
+import { Application, type ApplicationInternalNote } from '@domain/entities';
 import type { ApplicationsRepository } from '@domain/repositories';
 import { type Application as ApplicationModel, Prisma, type PrismaClient } from '@prisma/client';
 
@@ -55,10 +55,50 @@ export function makeApplicationsRepository(db: PrismaClient): ApplicationsReposi
         throw error;
       }
     },
+
+    async updateInternalNotes(id, notes) {
+      try {
+        const record = await db.application.update({
+          where: { id },
+          data: { internal_notes: notes },
+        });
+        return toEntity(record);
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          return null;
+        }
+        throw error;
+      }
+    },
   };
 }
 
 function toEntity(record: ApplicationModel): Application {
+  const parsedNotes = Array.isArray(record.internal_notes)
+    ? (record.internal_notes as unknown[]).flatMap((item) => {
+        if (typeof item === 'string') {
+          return [
+            {
+              text: item,
+              writer_name: 'Unknown',
+              written_at: record.created_at.toISOString(),
+            } satisfies ApplicationInternalNote,
+          ];
+        }
+        if (item && typeof item === 'object') {
+          const candidate = item as Partial<ApplicationInternalNote>;
+          if (
+            typeof candidate.text === 'string' &&
+            typeof candidate.writer_name === 'string' &&
+            typeof candidate.written_at === 'string'
+          ) {
+            return [candidate as ApplicationInternalNote];
+          }
+        }
+        return [];
+      })
+    : [];
+
   return new Application({
     id: record.id,
     full_name: record.full_name,
@@ -75,7 +115,7 @@ function toEntity(record: ApplicationModel): Application {
     id_file_url: record.id_file_url,
     consent_recruitment_data_processing: record.consent_recruitment_data_processing,
     status: record.status,
-    internal_notes: Array.isArray(record.internal_notes) ? (record.internal_notes as string[]) : [],
+    internal_notes: parsedNotes,
     created_at: record.created_at,
     updated_at: record.updated_at,
   });

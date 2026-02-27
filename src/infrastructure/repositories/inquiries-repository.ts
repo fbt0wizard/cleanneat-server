@@ -1,4 +1,4 @@
-import { Inquiry } from '@domain/entities';
+import { Inquiry, type InquiryInternalNote } from '@domain/entities';
 import type { InquiriesRepository } from '@domain/repositories';
 import { type Inquiry as InquiryModel, Prisma, type PrismaClient } from '@prisma/client';
 
@@ -59,10 +59,50 @@ export function makeInquiriesRepository(db: PrismaClient): InquiriesRepository {
         throw error;
       }
     },
+
+    async updateInternalNotes(id, notes) {
+      try {
+        const record = await db.inquiry.update({
+          where: { id },
+          data: { internal_notes: notes },
+        });
+        return toEntity(record);
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          return null;
+        }
+        throw error;
+      }
+    },
   };
 }
 
 function toEntity(record: InquiryModel): Inquiry {
+  const parsedNotes = Array.isArray(record.internal_notes)
+    ? (record.internal_notes as unknown[]).flatMap((item) => {
+        if (typeof item === 'string') {
+          return [
+            {
+              text: item,
+              writer_name: 'Unknown',
+              written_at: record.created_at.toISOString(),
+            } satisfies InquiryInternalNote,
+          ];
+        }
+        if (item && typeof item === 'object') {
+          const candidate = item as Partial<InquiryInternalNote>;
+          if (
+            typeof candidate.text === 'string' &&
+            typeof candidate.writer_name === 'string' &&
+            typeof candidate.written_at === 'string'
+          ) {
+            return [candidate as InquiryInternalNote];
+          }
+        }
+        return [];
+      })
+    : [];
+
   return new Inquiry({
     id: record.id,
     requester_type: record.requester_type,
@@ -83,7 +123,7 @@ function toEntity(record: InquiryModel): Inquiry {
     consent_to_contact: record.consent_to_contact,
     consent_data_processing: record.consent_data_processing,
     status: record.status,
-    internal_notes: Array.isArray(record.internal_notes) ? (record.internal_notes as string[]) : [],
+    internal_notes: parsedNotes,
     created_at: record.created_at,
     updated_at: record.updated_at,
   });

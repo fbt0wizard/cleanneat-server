@@ -1,3 +1,9 @@
+export type InquiryInternalNote = {
+  text: string;
+  writer_name: string;
+  written_at: string;
+};
+
 export class Inquiry {
   readonly id: string;
   readonly requester_type: string;
@@ -18,7 +24,7 @@ export class Inquiry {
   readonly consent_to_contact: boolean;
   readonly consent_data_processing: boolean;
   readonly status: string;
-  readonly internal_notes: string[];
+  readonly internal_notes: InquiryInternalNote[];
   readonly created_at: Date;
   readonly updated_at: Date;
 
@@ -42,7 +48,7 @@ export class Inquiry {
     consent_to_contact: boolean;
     consent_data_processing: boolean;
     status: string;
-    internal_notes: string[];
+    internal_notes: InquiryInternalNote[];
     created_at: Date;
     updated_at: Date;
   }) {

@@ -1,6 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { match } from 'ts-pattern';
+import { addInquiryNote } from './add-inquiry-note';
 import { createInquiry } from './create-inquiry';
+import { deleteInquiryNote } from './delete-inquiry-note';
 import { toInquiryResponse } from './inquiry-response';
 import { listInquiries } from './list-inquiries';
 import { markInquiryRead } from './mark-inquiry-read';
@@ -28,7 +30,18 @@ const inquiryResponseSchema = {
     consent_to_contact: { type: 'boolean' },
     consent_data_processing: { type: 'boolean' },
     status: { type: 'string' },
-    internal_notes: { type: 'array', items: { type: 'string' } },
+    internal_notes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          text: { type: 'string' },
+          writer_name: { type: 'string' },
+          written_at: { type: 'string', format: 'date-time' },
+        },
+        required: ['text', 'writer_name', 'written_at'],
+      },
+    },
     created_at: { type: 'string', format: 'date-time' },
     updated_at: { type: 'string', format: 'date-time' },
   },
@@ -262,6 +275,142 @@ export default async function inquiriesController(fastify: FastifyInstance) {
           }),
         )
         .with({ type: 'not_found' }, () => reply.status(404).send({ message: 'Inquiry not found', statusCode: 404 }))
+        .with({ type: 'validation_error' }, ({ message }) =>
+          reply.status(400).send({ message: `Validation failed: ${message}`, statusCode: 400 }),
+        )
+        .with({ type: 'error' }, () => reply.status(500).send({ message: 'Internal server error', statusCode: 500 }))
+        .exhaustive();
+    },
+  });
+
+  // PATCH /api/v1/inquiries/:id/notes – authenticated (add note with writer + timestamp)
+  fastify.route<{
+    Params: { id: string };
+    Body: { note: string };
+  }>({
+    method: 'PATCH',
+    url: '/api/v1/inquiries/:id/notes',
+    preHandler: [fastify.authenticate],
+    schema: {
+      summary: 'Add inquiry note',
+      description: 'Append a note to inquiry with writer name and timestamp. Requires authentication.',
+      tags: ['inquiries'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: { id: { type: 'string' } },
+      },
+      body: {
+        type: 'object',
+        required: ['note'],
+        properties: {
+          note: { type: 'string', minLength: 1, maxLength: 5000 },
+        },
+      },
+      response: {
+        200: {
+          description: 'Inquiry note added',
+          type: 'object',
+          properties: { inquiry: inquiryResponseSchema },
+          required: ['inquiry'],
+        },
+        401: { $ref: 'ErrorResponse#' },
+        400: { $ref: 'ErrorResponse#' },
+        404: { $ref: 'ErrorResponse#' },
+        500: { $ref: 'ErrorResponse#' },
+      },
+    },
+    handler: async (request, reply) => {
+      const userId = request.userId;
+      if (!userId) return reply.status(401).send({ message: 'Unauthorized', statusCode: 401 });
+
+      const result = await addInquiryNote(
+        {
+          inquiryId: request.params.id,
+          note: request.body.note,
+          userId,
+        },
+        fastify.dependencies,
+      );
+
+      return match(result)
+        .with({ type: 'success' }, ({ inquiry }) =>
+          reply.status(200).send({
+            inquiry: {
+              ...toInquiryResponse(inquiry),
+              created_at: inquiry.created_at.toISOString(),
+              updated_at: inquiry.updated_at.toISOString(),
+            },
+          }),
+        )
+        .with({ type: 'not_found' }, () => reply.status(404).send({ message: 'Inquiry not found', statusCode: 404 }))
+        .with({ type: 'validation_error' }, ({ message }) =>
+          reply.status(400).send({ message: `Validation failed: ${message}`, statusCode: 400 }),
+        )
+        .with({ type: 'error' }, () => reply.status(500).send({ message: 'Internal server error', statusCode: 500 }))
+        .exhaustive();
+    },
+  });
+
+  // DELETE /api/v1/inquiries/:id/notes/:noteIndex – authenticated (delete note by index)
+  fastify.route<{
+    Params: { id: string; noteIndex: string };
+  }>({
+    method: 'DELETE',
+    url: '/api/v1/inquiries/:id/notes/:noteIndex',
+    preHandler: [fastify.authenticate],
+    schema: {
+      summary: 'Delete inquiry note',
+      description: 'Delete an inquiry note by index position. Requires authentication.',
+      tags: ['inquiries'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id', 'noteIndex'],
+        properties: {
+          id: { type: 'string' },
+          noteIndex: { type: 'integer', minimum: 0 },
+        },
+      },
+      response: {
+        200: {
+          description: 'Inquiry note deleted',
+          type: 'object',
+          properties: { inquiry: inquiryResponseSchema },
+          required: ['inquiry'],
+        },
+        401: { $ref: 'ErrorResponse#' },
+        400: { $ref: 'ErrorResponse#' },
+        404: { $ref: 'ErrorResponse#' },
+        500: { $ref: 'ErrorResponse#' },
+      },
+    },
+    handler: async (request, reply) => {
+      const userId = request.userId;
+      if (!userId) return reply.status(401).send({ message: 'Unauthorized', statusCode: 401 });
+
+      const result = await deleteInquiryNote(
+        {
+          inquiryId: request.params.id,
+          noteIndex: request.params.noteIndex,
+          userId,
+        },
+        fastify.dependencies,
+      );
+
+      return match(result)
+        .with({ type: 'success' }, ({ inquiry }) =>
+          reply.status(200).send({
+            inquiry: {
+              ...toInquiryResponse(inquiry),
+              created_at: inquiry.created_at.toISOString(),
+              updated_at: inquiry.updated_at.toISOString(),
+            },
+          }),
+        )
+        .with({ type: 'not_found' }, () => reply.status(404).send({ message: 'Inquiry not found', statusCode: 404 }))
+        .with({ type: 'note_not_found' }, () => reply.status(404).send({ message: 'Note not found', statusCode: 404 }))
         .with({ type: 'validation_error' }, ({ message }) =>
           reply.status(400).send({ message: `Validation failed: ${message}`, statusCode: 400 }),
         )

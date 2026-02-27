@@ -1,3 +1,9 @@
+export type ApplicationInternalNote = {
+  text: string;
+  writer_name: string;
+  written_at: string;
+};
+
 export class Application {
   readonly id: string;
   readonly full_name: string;
@@ -14,7 +20,7 @@ export class Application {
   readonly id_file_url: string | null;
   readonly consent_recruitment_data_processing: boolean;
   readonly status: string;
-  readonly internal_notes: string[];
+  readonly internal_notes: ApplicationInternalNote[];
   readonly created_at: Date;
   readonly updated_at: Date;
 
@@ -34,7 +40,7 @@ export class Application {
     id_file_url: string | null;
     consent_recruitment_data_processing: boolean;
     status: string;
-    internal_notes: string[];
+    internal_notes: ApplicationInternalNote[];
     created_at: Date;
     updated_at: Date;
   }) {
