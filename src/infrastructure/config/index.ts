@@ -42,8 +42,10 @@ export function makeConfig() {
     parsedEnv.SMTP_HOST && parsedEnv.MAIL_FROM
       ? {
           host: parsedEnv.SMTP_HOST,
-          port: parsedEnv.SMTP_PORT ?? 587,
-          secure: parsedEnv.SMTP_SECURE ?? false,
+          port: 587,
+          // port: parsedEnv.SMTP_PORT ?? 587,
+          secure: true,
+          // secure: parsedEnv.SMTP_SECURE ?? false,
           user: parsedEnv.SMTP_USER ?? undefined,
           pass: parsedEnv.SMTP_PASS ?? undefined,
           from: parsedEnv.MAIL_FROM,
