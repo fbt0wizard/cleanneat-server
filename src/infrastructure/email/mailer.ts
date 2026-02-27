@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Handlebars from 'handlebars';
+import { MailtrapClient } from 'mailtrap';
 import nodemailer from 'nodemailer';
 import type pino from 'pino';
 import type { ApplicationConfig } from '../config';
@@ -28,7 +29,7 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
   const mail = config.mail;
 
   if (!mail) {
-    logger.info('Mail not configured (SMTP_HOST/MAIL_FROM missing); credential emails disabled');
+    logger.info('Mail not configured (MAIL_FROM + MAILTRAP_API_KEY or SMTP_HOST missing); emails disabled');
     return {
       async sendUserCredentials() {
         // no-op
@@ -42,16 +43,22 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
     };
   }
 
-  const transporter = nodemailer.createTransport({
-    host: mail.host,
-    port: mail.port,
-    secure: false,
-    requireTLS: true,
-    auth: mail.user && mail.pass ? { user: mail.user, pass: mail.pass } : undefined,
-    connectionTimeout: 15_000,
-    greetingTimeout: 15_000,
-    socketTimeout: 30_000,
-  });
+  const activeMail = mail;
+  const mailtrapClient =
+    activeMail.provider === 'mailtrap_api' ? new MailtrapClient({ token: activeMail.apiKey }) : null;
+  const transporter =
+    activeMail.provider === 'smtp'
+      ? nodemailer.createTransport({
+          host: activeMail.host,
+          port: activeMail.port,
+          secure: activeMail.secure,
+          requireTLS: !activeMail.secure,
+          auth: activeMail.user && activeMail.pass ? { user: activeMail.user, pass: activeMail.pass } : undefined,
+          connectionTimeout: 15_000,
+          greetingTimeout: 15_000,
+          socketTimeout: 30_000,
+        })
+      : null;
 
   let credentialsTemplate: Handlebars.TemplateDelegate | null = null;
   let inquiryConfirmationTemplate: Handlebars.TemplateDelegate | null = null;
@@ -73,6 +80,50 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
   }
 
   const SEND_TIMEOUT_MS = 30_000;
+  const from = activeMail.fromName ? `"${activeMail.fromName}" <${activeMail.from}>` : activeMail.from;
+
+  async function withTimeout<T>(promise: Promise<T>): Promise<T> {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Email send timeout')), SEND_TIMEOUT_MS);
+    });
+    return Promise.race([promise, timeoutPromise]);
+  }
+
+  async function sendEmail(params: {
+    to: string;
+    subject: string;
+    html: string;
+    text?: string;
+    category: string;
+  }): Promise<void> {
+    if (activeMail.provider === 'mailtrap_api' && mailtrapClient) {
+      await withTimeout(
+        mailtrapClient.send({
+          from: { name: activeMail.fromName, email: activeMail.from },
+          to: [{ email: params.to }],
+          subject: params.subject,
+          text: params.text,
+          html: params.html,
+          category: params.category,
+        }),
+      );
+      return;
+    }
+
+    if (transporter) {
+      await withTimeout(
+        transporter.sendMail({
+          from,
+          to: params.to,
+          subject: params.subject,
+          html: params.html,
+        }),
+      );
+      return;
+    }
+
+    throw new Error('Mailer not configured');
+  }
 
   return {
     async sendUserCredentials(to: string, name: string, email: string, password: string) {
@@ -82,19 +133,13 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
           email,
           password,
         });
-
-        const sendPromise = transporter.sendMail({
-          from: mail.fromName ? `"${mail.fromName}" <${mail.from}>` : mail.from,
+        await sendEmail({
           to,
           subject: 'Your account credentials',
           html,
+          text: `Hello ${name}, your account credentials are ready.`,
+          category: 'user_creation',
         });
-
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Email send timeout')), SEND_TIMEOUT_MS);
-        });
-
-        await Promise.race([sendPromise, timeoutPromise]);
         logger.info({ to }, 'Credentials email sent');
       } catch (err) {
         logger.warn({ err, to }, 'Failed to send credentials email');
@@ -108,19 +153,13 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
           fullName,
           inquiryId,
         });
-
-        const sendPromise = transporter.sendMail({
-          from: mail.fromName ? `"${mail.fromName}" <${mail.from}>` : mail.from,
+        await sendEmail({
           to,
           subject: 'We received your quote request',
           html,
+          text: `Hello ${fullName}, we received your quote request (${inquiryId}).`,
+          category: 'inquiry_confirmation',
         });
-
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Email send timeout')), SEND_TIMEOUT_MS);
-        });
-
-        await Promise.race([sendPromise, timeoutPromise]);
         logger.info({ to, inquiryId }, 'Inquiry confirmation email sent');
       } catch (err) {
         logger.warn({ err, to, inquiryId }, 'Failed to send inquiry confirmation email');
@@ -134,19 +173,13 @@ export function makeMailer(config: ApplicationConfig, logger: pino.Logger): Mail
           fullName,
           applicationId,
         });
-
-        const sendPromise = transporter.sendMail({
-          from: mail.fromName ? `"${mail.fromName}" <${mail.from}>` : mail.from,
+        await sendEmail({
           to,
           subject: 'We received your job application',
           html,
+          text: `Hello ${fullName}, we received your application (${applicationId}).`,
+          category: 'application_confirmation',
         });
-
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Email send timeout')), SEND_TIMEOUT_MS);
-        });
-
-        await Promise.race([sendPromise, timeoutPromise]);
         logger.info({ to, applicationId }, 'Application confirmation email sent');
       } catch (err) {
         logger.warn({ err, to, applicationId }, 'Failed to send application confirmation email');

@@ -29,6 +29,8 @@ export function makeConfig() {
       .transform((val) => val === 'true' || val === '1'),
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
+    MAILTRAP_API_KEY: z.string().optional(),
+    MAILTRAP_API_TOKEN: z.string().optional(),
     MAIL_FROM: z.string().email().optional(),
     MAIL_FROM_NAME: z.string().optional(),
     // Upload (optional – defaults to ./uploads; PUBLIC_URL used for returned file URLs)
@@ -38,20 +40,29 @@ export function makeConfig() {
 
   const parsedEnv = schema.parse(process.env);
 
-  const mail =
-    parsedEnv.SMTP_HOST && parsedEnv.MAIL_FROM
+  const mailtrapToken = parsedEnv.MAILTRAP_API_TOKEN ?? parsedEnv.MAILTRAP_API_KEY;
+
+  const mail = parsedEnv.MAIL_FROM
+    ? mailtrapToken
       ? {
-          host: parsedEnv.SMTP_HOST,
-          port: 587,
-          // port: parsedEnv.SMTP_PORT ?? 587,
-          secure: true,
-          // secure: parsedEnv.SMTP_SECURE ?? false,
-          user: parsedEnv.SMTP_USER ?? undefined,
-          pass: parsedEnv.SMTP_PASS ?? undefined,
+          provider: 'mailtrap_api' as const,
+          apiKey: mailtrapToken,
           from: parsedEnv.MAIL_FROM,
           fromName: parsedEnv.MAIL_FROM_NAME ?? 'Clean Neat',
         }
-      : null;
+      : parsedEnv.SMTP_HOST
+        ? {
+            provider: 'smtp' as const,
+            host: parsedEnv.SMTP_HOST,
+            port: parsedEnv.SMTP_PORT ?? 587,
+            secure: parsedEnv.SMTP_SECURE ?? false,
+            user: parsedEnv.SMTP_USER ?? undefined,
+            pass: parsedEnv.SMTP_PASS ?? undefined,
+            from: parsedEnv.MAIL_FROM,
+            fromName: parsedEnv.MAIL_FROM_NAME ?? 'Clean Neat',
+          }
+        : null
+    : null;
 
   return {
     corsOrigin: parsedEnv.CORS_ORIGIN,
